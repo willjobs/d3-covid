@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <link rel="icon" href="data:;base64,=">
+        <title>Viz 1</title>
+        <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
+        <style type="text/css">
+            .spinner {
+                border: 16px solid #f3f3f3; /* Light grey */
+                border-top: 16px solid #3498db; /* Blue */
+                border-radius: 50%;
+                width: 120px;
+                height: 120px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .svg1-bar:hover {fill: orange;}
+
+            .line {
+                fill: none;
+                stroke: steelblue;
+                stroke-width: 2px;
+            }
+
+            .grid line {
+                stroke: lightgrey;
+                stroke-opacity: 0.7;
+                shape-rendering: crispEdges;
+            }
+
+            .grid path {
+                stroke-width: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="spinner"></div>
+        <script type="text/javascript">
+            const FONT_SIZES = {
+                tick: 12,
+                axisTitle: 14,
+                title: 16
+            }
+
+            //var spinner = new Spinner().spin(document.getElementById('spinner'));
+
+            var covidData;
+            var dataDict;
+
+            var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
+            var formatDate = d3.timeFormat("%b %e");  // for converting dates to strings
+
+            function dictRowParser(d) {
+                return {
+                    variable_name: d.variable_name,
+                    data_type: d.data_type,
+                    display_name: d.display_name,
+                    sort_order: parseInt(d.sort_order),
+                    category: d.category
+                };
+            }
+
+            function dataRowParser(d) {
+                return {
+                    countryname: d.countryname,
+                    date: parseDate(d.date),
+                    new_cases: parseFloat(d.new_cases),
+                    new_cases_per_million: parseFloat(d.new_cases_per_million),
+                    total_cases: parseFloat(d.total_cases),
+                    total_cases_per_million: parseFloat(d.total_cases_per_million),
+                    new_deaths: parseFloat(d.new_deaths),
+                    new_deaths_per_million: parseFloat(d.new_deaths_per_million),
+                    total_deaths: parseFloat(d.total_deaths),
+                    total_deaths_per_million: parseFloat(d.total_deaths_per_million),
+                    new_tests: parseFloat(d.new_tests),
+                    new_tests_per_thousand: parseFloat(d.new_tests_per_thousand),
+                    total_tests: parseFloat(d.total_tests),
+                    total_tests_per_thousand: parseFloat(d.total_tests_per_thousand),
+                    positive_rate: parseFloat(d.positive_rate),
+                    reproduction_rate: parseFloat(d.reproduction_rate),
+                    new_vaccinations: parseFloat(d.new_vaccinations),
+                    new_vaccinations_per_hundred: parseFloat(d.new_vaccinations_per_hundred),
+                    total_vaccinations: parseFloat(d.total_vaccinations),
+                    total_vaccinations_per_hundred: parseFloat(d.total_vaccinations_per_hundred),
+                    people_fully_vaccinated: parseFloat(d.people_fully_vaccinated),
+                    people_fully_vaccinated_per_hundred: parseFloat(d.people_fully_vaccinated_per_hundred),
+                    icu_patients: parseFloat(d.icu_patients),
+                    icu_patients_per_million: parseFloat(d.icu_patients_per_million),
+                    hosp_patients: parseFloat(d.hosp_patients),
+                    hosp_patients_per_million: parseFloat(d.hosp_patients_per_million),
+                    weekly_icu_admissions: parseFloat(d.weekly_icu_admissions),
+                    weekly_icu_admissions_per_million: parseFloat(d.weekly_icu_admissions_per_million),
+                    weekly_hosp_admissions: parseFloat(d.weekly_hosp_admissions),
+                    weekly_hosp_admissions_per_million: parseFloat(d.weekly_hosp_admissions_per_million),
+                    stringency_index: parseFloat(d.stringency_index),
+                    government_response_index: parseFloat(d.government_response_index),
+                    containment_health_index: parseFloat(d.containment_health_index),
+                    economic_support_index: parseFloat(d.economic_support_index),
+                    c1_school_closing: d.c1_school_closing,
+                    c2_workplace_closing: d.c2_workplace_closing,
+                    c3_cancel_public_events: d.c3_cancel_public_events,
+                    c4_restrictions_on_gatherings: d.c4_restrictions_on_gatherings,
+                    c5_close_public_transport: d.c5_close_public_transport,
+                    c6_stay_at_home_requirements: d.c6_stay_at_home_requirements,
+                    c7_restrictions_on_internal_movement: d.c7_restrictions_on_internal_movement,
+                    c8_international_travel_controls: d.c8_international_travel_controls,
+                    e1_income_support: d.e1_income_support,
+                    e2_debt_contract_relief: d.e2_debt_contract_relief,
+                    e3_fiscal_measures: parseFloat(d.e3_fiscal_measures),
+                    e4_international_support: parseFloat(d.e4_international_support),
+                    h1_public_information_campaigns: d.h1_public_information_campaigns,
+                    h2_testing_policy: d.h2_testing_policy,
+                    h3_contact_tracing: d.h3_contact_tracing,
+                    h6_facial_coverings: d.h6_facial_coverings,
+                    h7_vaccination_policy: d.h7_vaccination_policy,
+                    h4_emergency_investment_in_healthcare: parseFloat(d.h4_emergency_investment_in_healthcare),
+                    h5_investment_in_vaccines: parseFloat(d.h5_investment_in_vaccines),
+                    population: parseFloat(d.population),
+                    population_density: parseFloat(d.population_density),
+                    median_age: parseFloat(d.median_age),
+                    aged_65_older: parseFloat(d.aged_65_older),
+                    aged_70_older: parseFloat(d.aged_70_older),
+                    gdp_per_capita: parseFloat(d.gdp_per_capita),
+                    extreme_poverty: parseFloat(d.extreme_poverty),
+                    cardiovasc_death_rate: parseFloat(d.cardiovasc_death_rate),
+                    diabetes_prevalence: parseFloat(d.diabetes_prevalence),
+                    female_smokers: parseFloat(d.female_smokers),
+                    male_smokers: parseFloat(d.male_smokers),
+                    life_expectancy: parseFloat(d.life_expectancy),
+                    human_development_index: parseFloat(d.human_development_index)
+                };
+            }
+
+
+            const margin = {top: 20, right: 20, bottom: 40, left: 80};
+
+            // function used to wrap long names on y-axis
+            // see: https://bl.ocks.org/mbostock/7555321
+            function wrap(label_, height) {
+                label_.each(function(d) {
+                    let label = d3.select(this);
+                    let words = label.text().split(/\s+/).reverse();
+
+                    if(words.length > 1) {
+                        let word;
+                        let lineNumber = 0;
+                        let lineHeight = FONT_SIZES.tick;  // px
+
+                        let y = label.attr("y");
+                        let dy = parseFloat(label.attr("dy"));
+                        let shift_text_y = 0;
+                        
+                        // for centering (vertically) countries with multiple words (e.g., Democratic Republic of Congo)
+                        if(words.length > 2) {
+                            // no magic to this formula; just what I discovered works best
+                            shift_text_y = Math.floor(-2.5 - (FONT_SIZES.tick - 1)/2 * (words.length - 2));
+                        }
+
+                        label.text(null)
+                            .attr("transform", "translate(0, " + shift_text_y + ")");
+
+                        subtext = label.append("tspan")
+                                    .attr("transform", "translate(0, -10)");
+
+                        while (word = words.pop()) {
+                            subtext.append("tspan")
+                                .attr("x", -10)
+                                .attr("y", Math.floor((lineNumber * lineHeight)) + "px").text(word)
+                                .attr("dy", dy);
+                            lineNumber++;
+                        }
+                    }
+                });
+            };
+
+            function make_viz1() {
+                dims = {height: 500, width: d3.max([500,  // no smaller than 500px wide
+                                                    d3.min([800, // no larger than 800px wide
+                                                            Math.floor(window.innerWidth / 2)])])};
+                dims["innerHeight"] = dims.height - margin.top - margin.bottom
+                dims["innerWidth"] = dims.width - margin.left - margin.right
+
+                // from dropdown and slider
+                attribute = "new_cases";
+                the_date = "9/26/2020";
+
+                // TODO: will be taken from data
+                // TODO: handle missing values (convert to 0)
+                countryData = [{"countryname": "Liechtenstein", "new_cases": 217}, // longest single word country
+                               {"countryname": "Peru", "new_cases": 4},
+                               {"countryname": "United States", "new_cases": 432}, // 2-word country
+                               {"countryname": "Bosnia and Herzegovina", "new_cases": 916}, // 3-word country
+                               {"countryname": "Democratic Republic of Congo", "new_cases": 916}, // longest total length country and 4-word country
+                               ]; // shortest single word country
+
+                const svg = d3.select("body")
+                                .append("svg")
+                                    .attr("width", dims.width)
+                                    .attr("height", dims.height)
+                                    .attr("id", "viz1-svg")
+                                .append("g")
+                                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+                                    //.attr("font", "14px sans-serif")
+                                    ;
+
+                var yScale = d3.scaleBand()
+                                //.domain(d3.range(countryData.length))
+                                .domain(countryData.map(d => d.countryname))
+                                .rangeRound([0, dims.innerHeight - 10])
+                                .paddingInner(0.1);
+
+                var xScale = d3.scaleLinear()
+                                .domain([0, d3.max(countryData, d => d[attribute])])
+                                .rangeRound([0, dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+
+                // make y-axis
+                svg.append("g")
+                    .classed("y axis", true)
+                    .call(d3.axisLeft(yScale))
+                .selectAll(".tick text")
+                    .call(wrap, yScale.bandwidth());
+                
+                // remove y-axis ticks and vertical black line
+                svg.selectAll(".y.axis .tick line").remove();
+                svg.selectAll(".y.axis path").remove();
+
+                // make x-axis
+                svg.append("g")
+                    .classed("x axis", true)
+                    .attr("transform", "translate(0," + dims.innerHeight + ")")
+                    .call(d3.axisBottom(xScale));
+
+                // x-axis title
+                svg.append("text")
+                    .attr("transform",
+                            "translate(" + (dims.innerWidth/2) + " ," + 
+                                        (dims.innerHeight + margin.top + 20) + ")")
+                    .style("text-anchor", "middle")
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", FONT_SIZES.axisTitle)
+                    .text(attribute);
+                
+                // add the X gridlines
+                svg.append("g")			
+                    .attr("class", "grid")
+                    .attr("transform", "translate(0," + dims.innerHeight + ")")
+                    .call(d3.axisBottom(xScale)
+                            .ticks(5)
+                            .tickSize(-dims.innerHeight)
+                            .tickFormat(""));
+                
+                // set all ticks' fonts. These aren't styles/CSS, these are attributes
+                d3.selectAll(".axis")
+                    .attr("font-size", FONT_SIZES.tick)
+                    .attr("font-family", "sans-serif");
+
+                svg.selectAll("rect")
+                    .data(countryData)
+                    .enter()
+                    .append("rect")
+                    .attr("y", function(d, i) {return yScale(d.countryname);})
+                    //.attr("x", 0) // not actually needed; all bars start at 0
+                    .attr("height", yScale.bandwidth())
+                    .attr("width", d => xScale(d[attribute]))
+                    .attr("fill", "rgba(0, 0, 255, 0.75)")
+                    .classed("svg1-bar", true);
+            }
+
+            // load the data and kick things off
+            Promise.all([
+                d3.csv("../data/data_dictionary.csv", dictRowParser),
+                d3.csv("../data/covid_data.csv", dataRowParser),
+            ]).then(function(files) {
+                dataDict = files[0];
+                covidData = files[1];
+                d3.selectAll(".spinner").remove();
+                console.log("Imported all data!");
+
+                make_viz1();
+            }).catch(function(err) {
+                d3.selectAll(".spinner").remove();
+                console.error('Error: ' + err);
+            })
+        </script>
+    </body>
+</html>
