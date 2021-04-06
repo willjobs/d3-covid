@@ -20,7 +20,13 @@
                 100% { transform: rotate(360deg); }
             }
 
-            .svg1-bar:hover {fill: orange;}
+            .hover-bar {
+                stroke-width: 1px;
+                stroke: white;
+                stroke-opacity: 0.5;
+                -webkit-filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
+                filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
+            }
 
             .line {
                 fill: none;
@@ -260,16 +266,35 @@
                     .attr("font-size", FONT_SIZES.tick)
                     .attr("font-family", "sans-serif");
 
-                svg.selectAll("rect")
-                    .data(countryData)
-                    .enter()
-                    .append("rect")
-                    .attr("y", function(d, i) {return yScale(d.countryname);})
-                    //.attr("x", 0) // not actually needed; all bars start at 0
-                    .attr("height", yScale.bandwidth())
-                    .attr("width", d => xScale(d[attribute]))
-                    .attr("fill", "rgba(0, 0, 255, 0.75)")
-                    .classed("svg1-bar", true);
+                // Create the bars: there will be one with the actual data, and one that is invisible
+                // which extends the length of the chart and activates the hover effect
+                let bars = svg.selectAll("g.data")
+                            .data(countryData)
+                            .enter()
+                            .append("g")
+                                .classed("viz1-bar-data", true)
+                                .attr("id", function(d,i) {return "viz1-bar" + i});
+
+                bars.append("rect")
+                        .attr("y", function(d, i) {return yScale(d.countryname);})
+                        //.attr("x", 0) // not actually needed; all bars start at 0
+                        .attr("height", yScale.bandwidth())
+                        .attr("width", d => xScale(d[attribute]))
+                        .attr("fill", "rgba(0, 0, 255, 0.75)")
+                        .classed("svg1-bar", true);
+                
+                // add a transparent bar on top that extends the width of the chart so we can activat
+                // the hover effect at any point along axis in the case of short bars
+                bars.append("rect")
+                        .attr("y", function(d, i) {return yScale(d.countryname);})
+                        .attr("height", yScale.bandwidth())
+                        .attr("width", dims.innerWidth)
+                        .attr("fill", "rgba(255,255,255,0")
+                        .on("mouseover", function() {
+                            d3.select(this.parentNode).classed("hover-bar", true);
+                        }).on("mouseout", function() {
+                            d3.select(this.parentNode).classed("hover-bar", false);
+                        });
             }
 
             // load the data and kick things off
