@@ -47,7 +47,7 @@
                 stroke-width: 0;
             }
 
-            .toolTip {
+            .tooltip {
                 position: absolute;
                 display: none;
                 min-width: 80px;
@@ -61,20 +61,39 @@
     </head>
     <body>
         <div class="spinner"></div>
+
+        <select name="viz1-countries" id="viz1-countries" multiple>
+            <option value="Canada">Canada</option>
+            <option value="Germany">Germany</option>
+            <option value="Mexico">Mexico</option>
+            <option value="Russia">Russia</option>
+            <option value="Spain">Spain</option>
+            <option value="United States">United States</option>
+        </select>
+
+        <div class="viz1"></div>
+
         <script type="text/javascript">
+            // NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
+            // will overwrite any classes that already exist there, which may not be what you want.
             const FONT_SIZES = {
                 tick: 12,
                 axisTitle: 14,
                 title: 16
             }
 
-            //var spinner = new Spinner().spin(document.getElementById('spinner'));
-
-            var covidData;
-            var dataDict;
+            var viz1 = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1
 
             var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
             var formatDate = d3.timeFormat("%b %e");  // for converting dates to strings
+
+            var covidData;
+            var dataDict;
+            var viz1SelectedCountries = [];
+
+            // TODO: delete this when ready for attribute dropdown and date slider
+            var attribute = "new_cases";
+            var the_date = parseDate("2020-07-01");
 
             function dictRowParser(d) {
                 return {
@@ -158,8 +177,6 @@
             }
 
 
-            const margin = {top: 20, right: 20, bottom: 40, left: 80};
-
             // function used to wrap long names on y-axis
             // see: https://bl.ocks.org/mbostock/7555321
             function wrap(label_, height) {
@@ -199,129 +216,172 @@
                 });
             };
 
-            function make_viz1() {
-                dims = {height: 500, width: d3.max([500,  // no smaller than 500px wide
-                                                    d3.min([800, // no larger than 800px wide
+
+            function makeViz1() {
+                viz1.margin = {top: 20, right: 20, bottom: 40, left: 100};
+
+                viz1.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
+                                                    d3.min([900, // no larger than 900px wide
                                                             Math.floor(window.innerWidth / 2)])])};
-                dims["innerHeight"] = dims.height - margin.top - margin.bottom
-                dims["innerWidth"] = dims.width - margin.left - margin.right
+                viz1.dims["innerHeight"] = viz1.dims.height - viz1.margin.top - viz1.margin.bottom
+                viz1.dims["innerWidth"] = viz1.dims.width - viz1.margin.left - viz1.margin.right
 
-                // from dropdown and slider
-                attribute = "new_cases";
-                the_date = "9/26/2020";
-
-                // TODO: will be taken from data
-                // TODO: handle missing values (convert to 0)
-                countryData = [{"countryname": "Liechtenstein", "new_cases": 217}, // longest single word country
-                               {"countryname": "Peru", "new_cases": 4},
-                               {"countryname": "United States", "new_cases": 432}, // 2-word country
-                               {"countryname": "Bosnia and Herzegovina", "new_cases": 916}, // 3-word country
-                               {"countryname": "Democratic Republic of Congo", "new_cases": 916}, // longest total length country and 4-word country
-                               ]; // shortest single word country
-
-                const svg = d3.select("body")
+                viz1.svg = d3.select("div.viz1")
                                 .append("svg")
-                                    .attr("width", dims.width)
-                                    .attr("height", dims.height)
-                                    .attr("id", "viz1-svg")
+                                    .attr("width", viz1.dims.width)
+                                    .attr("height", viz1.dims.height)
+                                    .classed("viz1", true)
                                 .append("g")
-                                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                                    .attr("transform", "translate(" + viz1.margin.left + "," + viz1.margin.top + ")");
 
-                var yScale = d3.scaleBand()
-                                //.domain(d3.range(countryData.length))
-                                .domain(countryData.map(d => d.countryname))
-                                .rangeRound([0, dims.innerHeight - 10])
+                viz1.yScale = d3.scaleBand()
+                                .rangeRound([0, viz1.dims.innerHeight - 10])
                                 .paddingInner(0.1);
 
-                var xScale = d3.scaleLinear()
-                                .domain([0, d3.max(countryData, d => d[attribute])])
-                                .rangeRound([0, dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+                viz1.xScale = d3.scaleLinear()
+                                .rangeRound([0, viz1.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
 
                 // make y-axis
-                svg.append("g")
-                    .classed("y axis", true)
-                    .call(d3.axisLeft(yScale))
-                .selectAll(".tick text")
-                    .call(wrap, yScale.bandwidth());
-                
-                // remove y-axis ticks and vertical black line
-                svg.selectAll(".y.axis .tick line").remove();
-                svg.selectAll(".y.axis path").remove();
+                viz1.svg.append("g")
+                    .classed("viz1 y axis", true);
 
+                viz1.yAxis = d3.axisLeft(viz1.yScale);
+                
                 // make x-axis
-                svg.append("g")
-                    .classed("x axis", true)
-                    .attr("transform", "translate(0," + dims.innerHeight + ")")
-                    .call(d3.axisBottom(xScale));
+                viz1.svg.append("g")
+                    .classed("viz1 x axis", true)
+                    .attr("transform", "translate(0," + viz1.dims.innerHeight + ")");
+
+                viz1.xAxis = d3.axisBottom(viz1.xScale);
 
                 // x-axis title
-                svg.append("text")
+                viz1.svg.append("text")
+                    .classed("viz1 x axis-title", true)
                     .attr("transform",
-                            "translate(" + (dims.innerWidth/2) + " ," + 
-                                        (dims.innerHeight + margin.top + 20) + ")")
+                            "translate(" + (viz1.dims.innerWidth/2) + " ," + 
+                                        (viz1.dims.innerHeight + viz1.margin.top + 20) + ")")
                     .style("text-anchor", "middle")
                     .attr("font-family", "sans-serif")
                     .attr("font-size", FONT_SIZES.axisTitle)
                     .text(attribute);
                 
-                // add the X gridlines
+                // x-axis gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                svg.append("g")
-                    .attr("class", "grid")
-                    .attr("transform", "translate(0," + dims.innerHeight + ")")
-                    .call(d3.axisBottom(xScale)
-                            .ticks(5)
-                            .tickSize(-dims.innerHeight)
-                            .tickFormat(""));
+                viz1.svg.append("g")
+                    .classed("viz1 x grid", true)
+                    .attr("transform", "translate(0," + viz1.dims.innerHeight + ")");
                 
+                viz1.xAxisTicks = d3.axisBottom(viz1.xScale)
+                                    .ticks(5)
+                                    .tickSize(-viz1.dims.innerHeight)
+                                    .tickFormat("");
+
+                viz1.tooltip = d3.select("body")
+                                .append("div")
+                                .classed("viz1 tooltip", true);
+
                 // set all ticks' fonts. These aren't styles/CSS, these are attributes
-                d3.selectAll(".axis")
+                d3.selectAll(".viz1.axis")
                     .attr("font-size", FONT_SIZES.tick)
                     .attr("font-family", "sans-serif");
 
+            }
+            
+
+            function redrawViz1() {
+                let viz1Data = covidData.filter(d => viz1SelectedCountries.includes(d.countryname) && 
+                                                     d.date.getTime() == the_date.getTime());
+
+                // TODO: handle missing values (convert to 0) (use javascript .isNaN)
+                // test cases:
+                //  Liechtenstein: longest single word country
+                //  Peru: shortest single word country
+                //  United States: 2-word country
+                //  Bosnia and Herzegovina: 3-word country
+                //  Democratic Republic of Congo: longest length, and 4-word country
+
+                // in case we removed all the data, don't show any axes or gridlines
+                let axis_visibility = viz1Data.length == 0 ? "display:none" : "";
+                d3.selectAll(".x").attr("style", axis_visibility);
+                d3.selectAll(".y").attr("style", axis_visibility);
+                d3.selectAll(".grid").attr("style", axis_visibility);
+
+                /******
+                 * update y-axis
+                ******/
+                //** Doing it this way so that we can maintain the order in which the user selected countries
+                // Uncomment the below if you want to do it in the order of the dataset, not the user's selection:
+                //      viz1.yScale.domain(viz1Data.map(d => d.countryname));
+                viz1.yScale.domain(viz1SelectedCountries);
+
+                d3.select(".viz1.y.axis")
+                    .transition()
+                    .duration(500)
+                    .call(viz1.yAxis)
+                    .selectAll(".tick text")
+                        .call(wrap, viz1.yScale.bandwidth());
+
+                // remove y-axis ticks and vertical black line
+                d3.selectAll(".viz1.y.axis .tick line").remove();
+                d3.selectAll(".viz1.y.axis path").remove();
+
+                /******
+                 * update x-axis
+                ******/
+                viz1.xScale.domain([0, d3.max(viz1Data, d => d[attribute])]);
+
+                d3.select(".viz1.x.axis")
+                    .transition()
+                    .duration(300)
+                    .call(viz1.xAxis);
+                
+                // update x-axis title in case the attribute changed
+                d3.select("text.viz1.x.axis-title")
+                    .text(attribute);
+
+                // add the X gridlines
+                // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+                d3.select(".viz1.grid")
+                    .call(viz1.xAxisTicks);
+
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
-                let bars = svg.selectAll("g.data")
-                            .data(countryData)
-                            .enter()
-                            .append("g")
-                                .classed("viz1-bar-data", true)
-                                .attr("id", function(d,i) {return "viz1-bar" + i});
+                let bars = viz1.svg.selectAll("rect")
+                            .data(viz1Data, d => d.countryname);
 
-                var tooltip = d3.select("body")
-                                .append("div")
-                                .attr("class", "toolTip")
-                                .attr("id", "viz1-tooltip");
+                bars.exit()
+                    .transition()
+                    .duration(300)
+                    .style("fill-opacity", 0)
+                    .remove();
 
+                bars.enter()
+                    .append("rect")
+                        .attr("fill", "rgba(0,0,255,0.75)")
+                        .classed("viz1 bar", true)
+                        .attr("id", function(d,i) {return "viz1-bar" + i})
+                        .merge(bars)
+                            .on("mouseover", function() {
+                                d3.select(this).classed("hover-bar", true);
+                            }).on("mousemove", function(event, d) {
+                                viz1.tooltip
+                                    .style("left", event.pageX - 50 + "px")
+                                    .style("top", event.pageY - 70 + "px")
+                                    .style("display", "inline-block")
+                                    .html((d.countryname) + "<br><b>" + attribute + "</b>: " + d[attribute]);
+                            }).on("mouseout", function() {
+                                d3.select(this).classed("hover-bar", false);
+                                viz1.tooltip.style("display", "none");
+                            })
+                            .transition()
+                            .duration(500)
+                            .attr("y", d => viz1.yScale(d.countryname))
+                            .attr("height", viz1.yScale.bandwidth())
+                            .attr("width", d => viz1.xScale(d[attribute]));
 
-                bars.append("rect")
-                    .attr("y", function(d, i) {return yScale(d.countryname);})
-                    //.attr("x", 0) // not actually needed; all bars start at 0
-                    .attr("height", yScale.bandwidth())
-                    .attr("width", d => xScale(d[attribute]))
-                    .attr("fill", "rgba(0, 0, 255, 0.75)")
-                    .classed("svg1-bar", true);
-
-                
                 // Add a transparent bar on top that extends the width of the chart so we can activate
                 //     the hover effect at any point along axis in the case of short bars.
                 // Also include a tooltip! (reference: https://bl.ocks.org/alandunning/274bf248fd0f362d64674920e85c1eb7)
-                bars.append("rect")
-                    .attr("y", function(d, i) {return yScale(d.countryname);})
-                    .attr("height", yScale.bandwidth())
-                    .attr("width", dims.innerWidth)
-                    .attr("fill", "rgba(255,255,255,0")
-                    .on("mouseover", function() {
-                        d3.select(this.parentNode).classed("hover-bar", true);
-                    }).on("mousemove", function(event, d) {
-                        tooltip.style("left", event.pageX - 50 + "px")
-                                .style("top", event.pageY - 70 + "px")
-                                .style("display", "inline-block")
-                                .html((d.countryname) + "<br><b>" + attribute + "</b>: " + d[attribute]);
-                    }).on("mouseout", function() {
-                        d3.select(this.parentNode).classed("hover-bar", false);
-                        tooltip.style("display", "none");
-                    });
             }
 
             // load the data and kick things off
@@ -334,7 +394,27 @@
                 d3.selectAll(".spinner").remove();
                 console.log("Imported all data!");
 
-                make_viz1();
+                makeViz1();
+                redrawViz1();
+
+                d3.select("#viz1-countries")
+                    .on("change", function() {
+                        let countries = [];
+
+                        selected = d3.select(this)
+                            .selectAll("option:checked") 
+                            .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
+
+                        // want to maintain ordering of original selection
+                        viz1SelectedCountries = viz1SelectedCountries.filter(d => countries.includes(d));
+                        added = countries.filter(d => !viz1SelectedCountries.includes(d));
+                        viz1SelectedCountries = viz1SelectedCountries.concat(added)
+
+                        console.log(viz1SelectedCountries);
+
+                        redrawViz1();
+                    });
+
             }).catch(function(err) {
                 d3.selectAll(".spinner").remove();
                 console.error('Error: ' + err);
