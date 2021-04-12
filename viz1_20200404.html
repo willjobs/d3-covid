@@ -246,7 +246,7 @@
 
 
             function makeViz1() {
-                viz1.margin = {top: 20, right: 20, bottom: 40, left: 100};
+                viz1.margin = {top: 20, right: 20, bottom: 40, left: 175};
 
                 viz1.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
                                                     d3.min([900, // no larger than 900px wide
@@ -308,11 +308,6 @@
                                 .append("div")
                                 .classed("viz1 tooltip", true);
 
-                // set all ticks' fonts. These aren't styles/CSS, these are attributes
-                d3.selectAll(".viz1.axis")
-                    .attr("font-size", FONT_SIZES.tick)
-                    .attr("font-family", "sans-serif");
-
             }
             
 
@@ -345,12 +340,11 @@
                 d3.select(".viz1.y.axis")
                     .transition()
                     .duration(500)
-                    .call(viz1.yAxis)
-                    .on("end", function() {x = d3.selectAll(".viz1.y.axis .tick text")
-                                                    .filter(d => d.includes(" "))
-                                                    .call(wrap, viz1.yScale.bandwidth());
-
-                                          });
+                    .call(viz1.yAxis);
+                    //.on("end", function() {x = d3.selectAll(".viz1.y.axis .tick text")
+                    //                                .filter(d => d.includes(" "))
+                    //                                .call(wrap, viz1.yScale.bandwidth());
+                    //                      });
 
                 // remove y-axis ticks and vertical black line
                 d3.selectAll(".viz1.y.axis .tick line").remove();
@@ -374,6 +368,11 @@
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
                 d3.select(".viz1.grid")
                     .call(viz1.xAxisTicks);
+
+                // set all ticks' fonts. These aren't styles/CSS, these are attributes
+                d3.selectAll(".viz1.axis")
+                    .attr("font-size", FONT_SIZES.tick)
+                    .attr("font-family", "sans-serif");
 
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
