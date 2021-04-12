@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <link rel="icon" href="data:;base64,=">
-        <title>Viz 1</title>
+        <title>Viz 1a</title>
         <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
         <style type="text/css">
             body {
@@ -64,9 +64,9 @@
         <div class="spinner"></div>
 
         <!-- to be populated using unique countries in dataset -->
-        <select name="viz1-countries" id="viz1-countries" multiple></select>
+        <select name="viz1a-countries" id="viz1a-countries" multiple></select>
 
-        <div class="viz1"></div>
+        <div class="viz1a"></div>
 
         <script type="text/javascript">
             // NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
@@ -81,14 +81,14 @@
             const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
                                         .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
 
-            var viz1 = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1
+            var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
 
             var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
             var formatDate = d3.timeFormat("%b %e");  // for converting dates to strings
 
             var covidData;
             var dataDict;
-            var viz1SelectedCountries = [];
+            var viz1aSelectedCountries = [];
 
             // TODO: delete this when ready for attribute dropdown and date slider
             var attribute = "new_cases";
@@ -193,49 +193,49 @@
             }
 
 
-            function makeViz1() {
-                viz1.margin = {top: 20, right: 20, bottom: 40, left: 175};
+            function makeViz1a() {
+                viz1a.margin = {top: 20, right: 20, bottom: 40, left: 175};
 
-                viz1.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
+                viz1a.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
                                                     d3.min([900, // no larger than 900px wide
                                                             Math.floor(window.innerWidth / 2)])])};
-                viz1.dims["innerHeight"] = viz1.dims.height - viz1.margin.top - viz1.margin.bottom
-                viz1.dims["innerWidth"] = viz1.dims.width - viz1.margin.left - viz1.margin.right
+                viz1a.dims["innerHeight"] = viz1a.dims.height - viz1a.margin.top - viz1a.margin.bottom
+                viz1a.dims["innerWidth"] = viz1a.dims.width - viz1a.margin.left - viz1a.margin.right
 
-                viz1.svg = d3.select("div.viz1")
+                viz1a.svg = d3.select("div.viz1a")
                                 .append("svg")
-                                    .attr("width", viz1.dims.width)
-                                    .attr("height", viz1.dims.height)
-                                    .classed("viz1", true)
+                                    .attr("width", viz1a.dims.width)
+                                    .attr("height", viz1a.dims.height)
+                                    .classed("viz1a", true)
                                 .append("g")
-                                    .attr("transform", "translate(" + viz1.margin.left + "," + viz1.margin.top + ")");
+                                    .attr("transform", "translate(" + viz1a.margin.left + "," + viz1a.margin.top + ")");
 
-                viz1.yScale = d3.scaleBand()
-                                .rangeRound([0, viz1.dims.innerHeight - 10])
+                viz1a.yScale = d3.scaleBand()
+                                .rangeRound([0, viz1a.dims.innerHeight - 10])
                                 .paddingInner(0.1);
 
-                viz1.xScale = d3.scaleLinear()
-                                .rangeRound([0, viz1.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+                viz1a.xScale = d3.scaleLinear()
+                                .rangeRound([0, viz1a.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
 
                 // make y-axis
-                viz1.svg.append("g")
-                    .classed("viz1 y axis", true);
+                viz1a.svg.append("g")
+                    .classed("viz1a y axis", true);
 
-                viz1.yAxis = d3.axisLeft(viz1.yScale);
+                viz1a.yAxis = d3.axisLeft(viz1a.yScale);
                 
                 // make x-axis
-                viz1.svg.append("g")
-                    .classed("viz1 x axis", true)
-                    .attr("transform", "translate(0," + viz1.dims.innerHeight + ")");
+                viz1a.svg.append("g")
+                    .classed("viz1a x axis", true)
+                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
 
-                viz1.xAxis = d3.axisBottom(viz1.xScale);
+                viz1a.xAxis = d3.axisBottom(viz1a.xScale);
 
                 // x-axis title
-                viz1.svg.append("text")
-                    .classed("viz1 x axis-title", true)
+                viz1a.svg.append("text")
+                    .classed("viz1a x axis-title", true)
                     .attr("transform",
-                            "translate(" + (viz1.dims.innerWidth/2) + " ," + 
-                                        (viz1.dims.innerHeight + viz1.margin.top + 20) + ")")
+                            "translate(" + (viz1a.dims.innerWidth/2) + " ," + 
+                                        (viz1a.dims.innerHeight + viz1a.margin.top + 20) + ")")
                     .style("text-anchor", "middle")
                     .attr("font-family", "sans-serif")
                     .attr("font-size", FONT_SIZES.axisTitle)
@@ -243,24 +243,24 @@
                 
                 // x-axis gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                viz1.svg.append("g")
-                    .classed("viz1 x grid", true)
-                    .attr("transform", "translate(0," + viz1.dims.innerHeight + ")");
+                viz1a.svg.append("g")
+                    .classed("viz1a x grid", true)
+                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
                 
-                viz1.xAxisTicks = d3.axisBottom(viz1.xScale)
+                viz1a.xAxisTicks = d3.axisBottom(viz1a.xScale)
                                     .ticks(5)
-                                    .tickSize(-viz1.dims.innerHeight)
+                                    .tickSize(-viz1a.dims.innerHeight)
                                     .tickFormat("");
 
-                viz1.tooltip = d3.select("body")
+                viz1a.tooltip = d3.select("body")
                                 .append("div")
-                                .classed("viz1 tooltip", true);
+                                .classed("viz1a tooltip", true);
 
             }
             
 
-            function redrawViz1() {
-                let viz1Data = covidData.filter(d => viz1SelectedCountries.includes(d.countryname) && 
+            function redrawViz1a() {
+                let viz1aData = covidData.filter(d => viz1aSelectedCountries.includes(d.countryname) && 
                                                      d.date.getTime() == the_date.getTime());
 
                 // TODO: handle missing values (convert to 0) (use javascript .isNaN)
@@ -272,7 +272,7 @@
                 //  Democratic Republic of Congo: longest length, and 4-word country
 
                 // in case we removed all the data, don't show any axes or gridlines
-                let axis_visibility = viz1Data.length == 0 ? "display:none" : "";
+                let axis_visibility = viz1aData.length == 0 ? "display:none" : "";
                 d3.selectAll(".x").attr("style", axis_visibility);
                 d3.selectAll(".y").attr("style", axis_visibility);
                 d3.selectAll(".grid").attr("style", axis_visibility);
@@ -282,46 +282,46 @@
                 ******/
                 //** Doing it this way so that we can maintain the order in which the user selected countries
                 // Uncomment the below if you want to do it in the order of the dataset, not the user's selection:
-                //      viz1.yScale.domain(viz1Data.map(d => d.countryname));
-                viz1.yScale.domain(viz1SelectedCountries);
+                //      viz1a.yScale.domain(viz1aData.map(d => d.countryname));
+                viz1a.yScale.domain(viz1aSelectedCountries);
 
-                d3.select(".viz1.y.axis")
+                d3.select(".viz1a.y.axis")
                     .transition()
                     .duration(500)
-                    .call(viz1.yAxis);
+                    .call(viz1a.yAxis);
 
                 // remove y-axis ticks and vertical black line
-                d3.selectAll(".viz1.y.axis .tick line").remove();
-                d3.selectAll(".viz1.y.axis path").remove();
+                d3.selectAll(".viz1a.y.axis .tick line").remove();
+                d3.selectAll(".viz1a.y.axis path").remove();
 
                 /******
                  * update x-axis
                 ******/
-                viz1.xScale.domain([0, d3.max(viz1Data, d => d[attribute])]);
+                viz1a.xScale.domain([0, d3.max(viz1aData, d => d[attribute])]);
 
-                d3.select(".viz1.x.axis")
+                d3.select(".viz1a.x.axis")
                     .transition()
                     .duration(300)
-                    .call(viz1.xAxis);
+                    .call(viz1a.xAxis);
                 
                 // update x-axis title in case the attribute changed
-                d3.select("text.viz1.x.axis-title")
+                d3.select("text.viz1a.x.axis-title")
                     .text(attribute);
 
                 // add the X gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                d3.select(".viz1.grid")
-                    .call(viz1.xAxisTicks);
+                d3.select(".viz1a.grid")
+                    .call(viz1a.xAxisTicks);
 
                 // set all ticks' fonts. These aren't styles/CSS, these are attributes
-                d3.selectAll(".viz1.axis")
+                d3.selectAll(".viz1a.axis")
                     .attr("font-size", FONT_SIZES.tick)
                     .attr("font-family", "sans-serif");
 
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
-                let bars = viz1.svg.selectAll("rect")
-                            .data(viz1Data, d => d.countryname);
+                let bars = viz1a.svg.selectAll("rect")
+                            .data(viz1aData, d => d.countryname);
 
                 bars.exit()
                     .transition()
@@ -332,26 +332,26 @@
                 bars.enter()
                     .append("rect")
                         .attr("fill", d => continentColors(d.continent))
-                        .classed("viz1 bar", true)
-                        .attr("id", function(d,i) {return "viz1-bar" + i})
+                        .classed("viz1a bar", true)
+                        .attr("id", function(d,i) {return "viz1a-bar" + i})
                         .merge(bars)
                             .on("mouseover", function() {
                                 d3.select(this).classed("hover-bar", true);
                             }).on("mousemove", function(event, d) {
-                                viz1.tooltip
+                                viz1a.tooltip
                                     .style("left", event.pageX - 50 + "px")
                                     .style("top", event.pageY - 70 + "px")
                                     .style("display", "inline-block")
                                     .html((d.countryname) + "<br><b>" + attribute + "</b>: " + d[attribute]);
                             }).on("mouseout", function() {
                                 d3.select(this).classed("hover-bar", false);
-                                viz1.tooltip.style("display", "none");
+                                viz1a.tooltip.style("display", "none");
                             })
                             .transition()
                             .duration(500)
-                            .attr("y", d => viz1.yScale(d.countryname))
-                            .attr("height", viz1.yScale.bandwidth())
-                            .attr("width", d => viz1.xScale(d[attribute]));
+                            .attr("y", d => viz1a.yScale(d.countryname))
+                            .attr("height", viz1a.yScale.bandwidth())
+                            .attr("width", d => viz1a.xScale(d[attribute]));
 
                 // Add a transparent bar on top that extends the width of the chart so we can activate
                 //     the hover effect at any point along axis in the case of short bars.
@@ -372,7 +372,7 @@
                 Array.from(new Set(covidData.map(d => d.countryname)))
                     .sort()  // put country names in order in dropdown menu
                     .forEach(function(country) {
-                        d3.select("select#viz1-countries")
+                        d3.select("select#viz1a-countries")
                             .append('option')
                             .attr("value", country)
                             .text(country);
@@ -380,10 +380,10 @@
 
                 // populate the select list with countries
 
-                makeViz1();
-                redrawViz1();
+                makeViz1a();
+                redrawViz1a();
 
-                d3.select("#viz1-countries")
+                d3.select("#viz1a-countries")
                     .on("change", function() {
                         let countries = [];
 
@@ -392,11 +392,11 @@
                             .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
 
                         // want to maintain ordering of original selection
-                        viz1SelectedCountries = viz1SelectedCountries.filter(d => countries.includes(d));
-                        added = countries.filter(d => !viz1SelectedCountries.includes(d));
-                        viz1SelectedCountries = viz1SelectedCountries.concat(added)
+                        viz1aSelectedCountries = viz1aSelectedCountries.filter(d => countries.includes(d));
+                        added = countries.filter(d => !viz1aSelectedCountries.includes(d));
+                        viz1aSelectedCountries = viz1aSelectedCountries.concat(added)
 
-                        redrawViz1();
+                        redrawViz1a();
                     });
 
             }).catch(function(err) {
