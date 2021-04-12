@@ -346,8 +346,11 @@
                     .transition()
                     .duration(500)
                     .call(viz1.yAxis)
-                    .selectAll(".tick text")
-                        .call(wrap, viz1.yScale.bandwidth());
+                    .on("end", function() {x = d3.selectAll(".viz1.y.axis .tick text")
+                                                    .filter(d => d.includes(" "))
+                                                    .call(wrap, viz1.yScale.bandwidth());
+
+                                          });
 
                 // remove y-axis ticks and vertical black line
                 d3.selectAll(".viz1.y.axis .tick line").remove();
