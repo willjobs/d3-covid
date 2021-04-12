@@ -56,6 +56,7 @@
                 border: 1px solid #6F257F;
                 padding: 14px;
                 text-align: center;
+                border-radius: 10px;
             }
         </style>
     </head>
@@ -97,11 +98,12 @@
 
             function dictRowParser(d) {
                 return {
-                    variable_name: d.variable_name,
-                    data_type: d.data_type,
-                    display_name: d.display_name,
-                    sort_order: parseInt(d.sort_order),
-                    category: d.category
+                    variable_name: d.variable_name,  // name of attribute in CSV
+                    data_type: d.data_type,  // string, date, numeric, or ordinal
+                    display_name: d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
+                    sort_order: parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
+                    category: d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
+                    numeric_column: d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
                 };
             }
 
