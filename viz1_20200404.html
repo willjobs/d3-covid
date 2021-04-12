@@ -77,6 +77,10 @@
                 title: 16
             }
 
+            // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
+            const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
+                                        .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
+
             var viz1 = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1
 
             var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
@@ -92,83 +96,111 @@
 
             function dictRowParser(d) {
                 return {
-                    variable_name: d.variable_name,  // name of attribute in CSV
-                    data_type: d.data_type,  // string, date, numeric, or ordinal
-                    display_name: d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
-                    sort_order: parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
-                    category: d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
-                    numeric_column: d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+                    variable_name :  d.variable_name,  // name of attribute in CSV
+                    data_type :      d.data_type,  // string, date, numeric, or ordinal
+                    display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
+                    sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
+                    category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
+                    numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
                 };
             }
 
             function dataRowParser(d) {
                 return {
-                    countryname: d.countryname,
-                    date: parseDate(d.date),
-                    new_cases: parseFloat(d.new_cases),
-                    new_cases_per_million: parseFloat(d.new_cases_per_million),
-                    total_cases: parseFloat(d.total_cases),
-                    total_cases_per_million: parseFloat(d.total_cases_per_million),
-                    new_deaths: parseFloat(d.new_deaths),
-                    new_deaths_per_million: parseFloat(d.new_deaths_per_million),
-                    total_deaths: parseFloat(d.total_deaths),
-                    total_deaths_per_million: parseFloat(d.total_deaths_per_million),
-                    new_tests: parseFloat(d.new_tests),
-                    new_tests_per_thousand: parseFloat(d.new_tests_per_thousand),
-                    total_tests: parseFloat(d.total_tests),
-                    total_tests_per_thousand: parseFloat(d.total_tests_per_thousand),
-                    positive_rate: parseFloat(d.positive_rate),
-                    reproduction_rate: parseFloat(d.reproduction_rate),
-                    new_vaccinations: parseFloat(d.new_vaccinations),
-                    new_vaccinations_per_hundred: parseFloat(d.new_vaccinations_per_hundred),
-                    total_vaccinations: parseFloat(d.total_vaccinations),
-                    total_vaccinations_per_hundred: parseFloat(d.total_vaccinations_per_hundred),
-                    people_fully_vaccinated: parseFloat(d.people_fully_vaccinated),
-                    people_fully_vaccinated_per_hundred: parseFloat(d.people_fully_vaccinated_per_hundred),
-                    icu_patients: parseFloat(d.icu_patients),
-                    icu_patients_per_million: parseFloat(d.icu_patients_per_million),
-                    hosp_patients: parseFloat(d.hosp_patients),
-                    hosp_patients_per_million: parseFloat(d.hosp_patients_per_million),
-                    weekly_icu_admissions: parseFloat(d.weekly_icu_admissions),
-                    weekly_icu_admissions_per_million: parseFloat(d.weekly_icu_admissions_per_million),
-                    weekly_hosp_admissions: parseFloat(d.weekly_hosp_admissions),
-                    weekly_hosp_admissions_per_million: parseFloat(d.weekly_hosp_admissions_per_million),
-                    stringency_index: parseFloat(d.stringency_index),
-                    government_response_index: parseFloat(d.government_response_index),
-                    containment_health_index: parseFloat(d.containment_health_index),
-                    economic_support_index: parseFloat(d.economic_support_index),
-                    c1_school_closing: d.c1_school_closing,
-                    c2_workplace_closing: d.c2_workplace_closing,
-                    c3_cancel_public_events: d.c3_cancel_public_events,
-                    c4_restrictions_on_gatherings: d.c4_restrictions_on_gatherings,
-                    c5_close_public_transport: d.c5_close_public_transport,
-                    c6_stay_at_home_requirements: d.c6_stay_at_home_requirements,
-                    c7_restrictions_on_internal_movement: d.c7_restrictions_on_internal_movement,
-                    c8_international_travel_controls: d.c8_international_travel_controls,
-                    e1_income_support: d.e1_income_support,
-                    e2_debt_contract_relief: d.e2_debt_contract_relief,
-                    e3_fiscal_measures: parseFloat(d.e3_fiscal_measures),
-                    e4_international_support: parseFloat(d.e4_international_support),
-                    h1_public_information_campaigns: d.h1_public_information_campaigns,
-                    h2_testing_policy: d.h2_testing_policy,
-                    h3_contact_tracing: d.h3_contact_tracing,
-                    h6_facial_coverings: d.h6_facial_coverings,
-                    h7_vaccination_policy: d.h7_vaccination_policy,
-                    h4_emergency_investment_in_healthcare: parseFloat(d.h4_emergency_investment_in_healthcare),
-                    h5_investment_in_vaccines: parseFloat(d.h5_investment_in_vaccines),
-                    population: parseFloat(d.population),
-                    population_density: parseFloat(d.population_density),
-                    median_age: parseFloat(d.median_age),
-                    aged_65_older: parseFloat(d.aged_65_older),
-                    aged_70_older: parseFloat(d.aged_70_older),
-                    gdp_per_capita: parseFloat(d.gdp_per_capita),
-                    extreme_poverty: parseFloat(d.extreme_poverty),
-                    cardiovasc_death_rate: parseFloat(d.cardiovasc_death_rate),
-                    diabetes_prevalence: parseFloat(d.diabetes_prevalence),
-                    female_smokers: parseFloat(d.female_smokers),
-                    male_smokers: parseFloat(d.male_smokers),
-                    life_expectancy: parseFloat(d.life_expectancy),
-                    human_development_index: parseFloat(d.human_development_index)
+                    countryname :                                  d.countryname, 
+                    date :                                         parseDate(d.date), 
+                    c1_school_closing_numeric :                    parseFloat(d.c1_school_closing_numeric), 
+                    c1_school_closing :                            d.c1_school_closing, 
+                    c2_workplace_closing_numeric :                 parseFloat(d.c2_workplace_closing_numeric), 
+                    c2_workplace_closing :                         d.c2_workplace_closing, 
+                    c3_cancel_public_events_numeric :              parseFloat(d.c3_cancel_public_events_numeric), 
+                    c3_cancel_public_events :                      d.c3_cancel_public_events, 
+                    c4_restrictions_on_gatherings_numeric :        parseFloat(d.c4_restrictions_on_gatherings_numeric), 
+                    c4_restrictions_on_gatherings :                d.c4_restrictions_on_gatherings, 
+                    c5_close_public_transport_numeric :            parseFloat(d.c5_close_public_transport_numeric), 
+                    c5_close_public_transport :                    d.c5_close_public_transport, 
+                    c6_stay_at_home_requirements_numeric :         parseFloat(d.c6_stay_at_home_requirements_numeric), 
+                    c6_stay_at_home_requirements :                 d.c6_stay_at_home_requirements, 
+                    c7_restrictions_on_internal_movement_numeric : parseFloat(d.c7_restrictions_on_internal_movement_numeric), 
+                    c7_restrictions_on_internal_movement :         d.c7_restrictions_on_internal_movement, 
+                    c8_international_travel_controls :             d.c8_international_travel_controls, 
+                    e1_income_support_numeric :                    parseFloat(d.e1_income_support_numeric), 
+                    e1_income_support :                            d.e1_income_support, 
+                    e2_debt_contract_relief :                      d.e2_debt_contract_relief, 
+                    h1_public_information_campaigns_numeric :      parseFloat(d.h1_public_information_campaigns_numeric), 
+                    h1_public_information_campaigns :              d.h1_public_information_campaigns, 
+                    h2_testing_policy :                            d.h2_testing_policy, 
+                    h3_contact_tracing :                           d.h3_contact_tracing, 
+                    h6_facial_coverings_numeric :                  parseFloat(d.h6_facial_coverings_numeric), 
+                    h6_facial_coverings :                          d.h6_facial_coverings, 
+                    h7_vaccination_policy_numeric :                parseFloat(d.h7_vaccination_policy_numeric), 
+                    h7_vaccination_policy :                        d.h7_vaccination_policy, 
+                    h8_combined_numeric :                          parseFloat(d.h8_combined_numeric), 
+                    h8_combined :                                  d.h8_combined, 
+                    stringency_index :                             parseFloat(d.stringency_index), 
+                    government_response_index :                    parseFloat(d.government_response_index), 
+                    containment_health_index :                     parseFloat(d.containment_health_index), 
+                    economic_support_index :                       parseFloat(d.economic_support_index), 
+                    continent :                                    d.continent, 
+                    total_cases :                                  parseFloat(d.total_cases), 
+                    new_cases :                                    parseFloat(d.new_cases), 
+                    new_cases_smoothed :                           parseFloat(d.new_cases_smoothed), 
+                    total_deaths :                                 parseFloat(d.total_deaths), 
+                    new_deaths :                                   parseFloat(d.new_deaths), 
+                    new_deaths_smoothed :                          parseFloat(d.new_deaths_smoothed), 
+                    total_cases_per_million :                      parseFloat(d.total_cases_per_million), 
+                    new_cases_per_million :                        parseFloat(d.new_cases_per_million), 
+                    new_cases_smoothed_per_million :               parseFloat(d.new_cases_smoothed_per_million), 
+                    total_deaths_per_million :                     parseFloat(d.total_deaths_per_million), 
+                    new_deaths_per_million :                       parseFloat(d.new_deaths_per_million), 
+                    new_deaths_smoothed_per_million :              parseFloat(d.new_deaths_smoothed_per_million), 
+                    reproduction_rate :                            parseFloat(d.reproduction_rate), 
+                    icu_patients :                                 parseFloat(d.icu_patients), 
+                    icu_patients_per_million :                     parseFloat(d.icu_patients_per_million), 
+                    hosp_patients :                                parseFloat(d.hosp_patients), 
+                    hosp_patients_per_million :                    parseFloat(d.hosp_patients_per_million), 
+                    weekly_icu_admissions :                        parseFloat(d.weekly_icu_admissions), 
+                    weekly_icu_admissions_per_million :            parseFloat(d.weekly_icu_admissions_per_million), 
+                    weekly_hosp_admissions :                       parseFloat(d.weekly_hosp_admissions), 
+                    weekly_hosp_admissions_per_million :           parseFloat(d.weekly_hosp_admissions_per_million), 
+                    new_tests :                                    parseFloat(d.new_tests), 
+                    total_tests :                                  parseFloat(d.total_tests), 
+                    total_tests_per_thousand :                     parseFloat(d.total_tests_per_thousand), 
+                    new_tests_per_thousand :                       parseFloat(d.new_tests_per_thousand), 
+                    new_tests_smoothed :                           parseFloat(d.new_tests_smoothed), 
+                    new_tests_smoothed_per_thousand :              parseFloat(d.new_tests_smoothed_per_thousand), 
+                    positive_rate :                                parseFloat(d.positive_rate), 
+                    tests_per_case :                               parseFloat(d.tests_per_case), 
+                    tests_units :                                  d.tests_units, 
+                    total_vaccinations :                           parseFloat(d.total_vaccinations), 
+                    people_vaccinated :                            parseFloat(d.people_vaccinated), 
+                    people_fully_vaccinated :                      parseFloat(d.people_fully_vaccinated), 
+                    new_vaccinations :                             parseFloat(d.new_vaccinations), 
+                    new_vaccinations_smoothed :                    parseFloat(d.new_vaccinations_smoothed), 
+                    total_vaccinations_per_hundred :               parseFloat(d.total_vaccinations_per_hundred), 
+                    people_vaccinated_per_hundred :                parseFloat(d.people_vaccinated_per_hundred), 
+                    people_fully_vaccinated_per_hundred :          parseFloat(d.people_fully_vaccinated_per_hundred), 
+                    new_vaccinations_smoothed_per_million :        parseFloat(d.new_vaccinations_smoothed_per_million), 
+                    population :                                   parseFloat(d.population), 
+                    population_density :                           parseFloat(d.population_density), 
+                    median_age :                                   parseFloat(d.median_age), 
+                    aged_65_older :                                parseFloat(d.aged_65_older), 
+                    aged_70_older :                                parseFloat(d.aged_70_older), 
+                    gdp_per_capita :                               parseFloat(d.gdp_per_capita), 
+                    extreme_poverty :                              parseFloat(d.extreme_poverty), 
+                    cardiovasc_death_rate :                        parseFloat(d.cardiovasc_death_rate), 
+                    diabetes_prevalence :                          parseFloat(d.diabetes_prevalence), 
+                    female_smokers :                               parseFloat(d.female_smokers), 
+                    male_smokers :                                 parseFloat(d.male_smokers), 
+                    handwashing_facilities :                       parseFloat(d.handwashing_facilities), 
+                    hospital_beds_per_thousand :                   parseFloat(d.hospital_beds_per_thousand), 
+                    life_expectancy :                              parseFloat(d.life_expectancy), 
+                    human_development_index :                      parseFloat(d.human_development_index), 
+                    e3_fiscal_measures :                           parseFloat(d.e3_fiscal_measures), 
+                    e4_international_support :                     parseFloat(d.e4_international_support), 
+                    h4_emergency_investment_in_healthcare :        parseFloat(d.h4_emergency_investment_in_healthcare), 
+                    h5_investment_in_vaccines :                    parseFloat(d.h5_investment_in_vaccines), 
+                    new_vaccinations_per_hundred :                 parseFloat(d.new_vaccinations_per_hundred)
                 };
             }
 
@@ -353,7 +385,7 @@
 
                 bars.enter()
                     .append("rect")
-                        .attr("fill", "rgba(0,0,255,0.75)")
+                        .attr("fill", d => continentColors(d.continent))
                         .classed("viz1 bar", true)
                         .attr("id", function(d,i) {return "viz1-bar" + i})
                         .merge(bars)
@@ -392,6 +424,7 @@
 
                 // get unique countries and put those into the dropdown
                 Array.from(new Set(covidData.map(d => d.countryname)))
+                    .sort()  // put country names in order in dropdown menu
                     .forEach(function(country) {
                         d3.select("select#viz1-countries")
                             .append('option')
