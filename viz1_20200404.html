@@ -63,14 +63,8 @@
     <body>
         <div class="spinner"></div>
 
-        <select name="viz1-countries" id="viz1-countries" multiple>
-            <option value="Canada">Canada</option>
-            <option value="Germany">Germany</option>
-            <option value="Mexico">Mexico</option>
-            <option value="Russia">Russia</option>
-            <option value="Spain">Spain</option>
-            <option value="United States">United States</option>
-        </select>
+        <!-- to be populated using unique countries in dataset -->
+        <select name="viz1-countries" id="viz1-countries" multiple></select>
 
         <div class="viz1"></div>
 
@@ -395,6 +389,17 @@
                 covidData = files[1];
                 d3.selectAll(".spinner").remove();
                 console.log("Imported all data!");
+
+                // get unique countries and put those into the dropdown
+                Array.from(new Set(covidData.map(d => d.countryname)))
+                    .forEach(function(country) {
+                        d3.select("select#viz1-countries")
+                            .append('option')
+                            .attr("value", country)
+                            .text(country);
+                    });
+
+                // populate the select list with countries
 
                 makeViz1();
                 redrawViz1();
