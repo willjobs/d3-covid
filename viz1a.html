@@ -91,7 +91,8 @@
             var viz1aSelectedCountries = [];
 
             // TODO: delete this when ready for attribute dropdown and date slider
-            var attribute = "new_cases";
+            var attribute = "new_cases";  // for testing numeric attributes
+            //var attribute = "c2_workplace_closing";  // for testing categorical attributes
             var the_date = parseDate("2020-07-01");
 
             function dictRowParser(d) {
@@ -234,12 +235,12 @@
                 viz1a.svg.append("text")
                     .classed("viz1a x axis-title", true)
                     .attr("transform",
-                            "translate(" + (viz1a.dims.innerWidth/2) + " ," + 
-                                        (viz1a.dims.innerHeight + viz1a.margin.top + 20) + ")")
+                            "translate(" + Math.floor(viz1a.dims.innerWidth/2 - viz1a.margin.left/2) + " ," + 
+                                        (viz1a.dims.innerHeight + viz1a.margin.top + 15) + ")")
                     .style("text-anchor", "middle")
                     .attr("font-family", "sans-serif")
                     .attr("font-size", FONT_SIZES.axisTitle)
-                    .text(attribute);
+                    .text("");
                 
                 // x-axis gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
@@ -248,7 +249,6 @@
                     .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
                 
                 viz1a.xAxisTicks = d3.axisBottom(viz1a.xScale)
-                                    .ticks(5)
                                     .tickSize(-viz1a.dims.innerHeight)
                                     .tickFormat("");
 
@@ -262,6 +262,12 @@
             function redrawViz1a() {
                 let viz1aData = covidData.filter(d => viz1aSelectedCountries.includes(d.countryname) && 
                                                      d.date.getTime() == the_date.getTime());
+
+                let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
+
+                // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
+                let attributeName = attribute;
+                let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
 
                 // TODO: handle missing values (convert to 0) (use javascript .isNaN)
                 // test cases:
@@ -297,7 +303,23 @@
                 /******
                  * update x-axis
                 ******/
-                viz1a.xScale.domain([0, d3.max(viz1aData, d => d[attribute])]);
+                // see if this variable is ordinal; if it does, use its "_numeric" column
+
+                if((var_metadata.data_type == "ordinal") &&
+                        (viz1aData.length > 0)) {
+                    // get largest value over entire dataset, not just selection
+                    let maxValue = d3.max(covidData, d => d[attributeData]);
+
+                    // set tick values to exactly these values
+                    // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
+                    viz1a.xScale.domain([0, maxValue]);
+                    viz1a.xAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
+                } else {
+                    viz1a.xScale.domain([0, d3.max(viz1aData, d => d[attributeData])]);
+                    console.log(viz1a.xAxis.tickValues());
+                    viz1a.xAxisTicks.ticks(5);
+                }
+
 
                 d3.select(".viz1a.x.axis")
                     .transition()
@@ -306,7 +328,7 @@
                 
                 // update x-axis title in case the attribute changed
                 d3.select("text.viz1a.x.axis-title")
-                    .text(attribute);
+                    .text(attributeName);
 
                 // add the X gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
@@ -342,7 +364,8 @@
                                     .style("left", event.pageX - 50 + "px")
                                     .style("top", event.pageY - 70 + "px")
                                     .style("display", "inline-block")
-                                    .html((d.countryname) + "<br><b>" + attribute + "</b>: " + d[attribute]);
+                                    // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
+                                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + d[attributeName]);
                             }).on("mouseout", function() {
                                 d3.select(this).classed("hover-bar", false);
                                 viz1a.tooltip.style("display", "none");
@@ -351,7 +374,7 @@
                             .duration(500)
                             .attr("y", d => viz1a.yScale(d.countryname))
                             .attr("height", viz1a.yScale.bandwidth())
-                            .attr("width", d => viz1a.xScale(d[attribute]));
+                            .attr("width", d => viz1a.xScale(d[attributeData]));
 
                 // Add a transparent bar on top that extends the width of the chart so we can activate
                 //     the hover effect at any point along axis in the case of short bars.
