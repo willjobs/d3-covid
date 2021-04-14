@@ -266,6 +266,11 @@
                 d3.selectAll(".viz1a.axis")
                     .attr("font-size", FONT_SIZES.tick)
                     .attr("font-family", "sans-serif");
+                
+                // rotate x-axis ticks
+                d3.selectAll('.viz1a.x.axis .tick text')
+                    .attr("transform","rotate(-45)")
+                    .attr("text-anchor","end");
 
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
@@ -355,9 +360,9 @@
             function makeViz1a() {
                 viz1a.redrawFunc = redrawViz1a;  // need this to be able to handle timestep updates
 
-                viz1a.margin = {top: 20, right: 20, bottom: 40, left: 175};
+                viz1a.margin = {top: 30, right: 20, bottom: 80, left: 175};
 
-                viz1a.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
+                viz1a.dims = {height: 450, width: d3.max([600,  // no smaller than 600px wide
                                                     d3.min([900, // no larger than 900px wide
                                                             Math.floor(window.innerWidth / 2)])])};
                 viz1a.dims["innerHeight"] = viz1a.dims.height - viz1a.margin.top - viz1a.margin.bottom
@@ -405,13 +410,13 @@
                                 .append("div")
                                 .classed("viz1a tooltip", true);
 
-
                 viz1a.title = viz1a.svg.append("text")
                     .classed("viz1a title", true)
                     .attr("x", 0)
                     .attr("y", 0)
-                    .attr("text-anchor", "start")  
-                    .style("font-size", "16px");
+                    .attr("text-anchor", "start")
+                    .attr("transform", "translate(0, -10)")
+                    .style("font-size", "20px");
 
                 /****************************
                 * Set up date slider
