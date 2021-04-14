@@ -184,6 +184,7 @@
             }
 
             function redrawViz1a() {
+
                 let viz1aData = covidData.filter(d => viz1aSelectedCountries.includes(d.countryname) && 
                                                       d.date.getTime() == theDate.getTime());
 
@@ -198,6 +199,8 @@
                 d3.selectAll(".x").attr("style", axis_visibility);
                 d3.selectAll(".y").attr("style", axis_visibility);
                 d3.selectAll(".grid").attr("style", axis_visibility);
+
+                viz1a.title.text(attributeName + " on " + formatDate(theDate));
 
                 /******
                  * update y-axis
@@ -253,10 +256,6 @@
                     .transition()
                     .duration(shortenTransitions > 0 ? shortenTransitions : 300)
                     .call(viz1a.xAxis);
-                
-                // update x-axis title in case the attribute changed
-                d3.select("text.viz1a.x.axis-title")
-                    .text(attributeName);
 
                 // add the X gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
@@ -316,7 +315,8 @@
                                     .style("top", event.pageY - 70 + "px")
                                     .style("display", "inline-block")
                                     // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
-                                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + d[attribute]);
+                                    // Also, don't show NaN or "NA". If no data, write "No data"
+                                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
                             }).on("mouseout", function() {
                                 d3.select(this).classed("hover-bar", false);
                                 viz1a.tooltip.style("display", "none");
@@ -390,17 +390,6 @@
                     .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
 
                 viz1a.xAxis = d3.axisBottom(viz1a.xScale);
-
-                // x-axis title
-                viz1a.svg.append("text")
-                    .classed("viz1a x axis-title", true)
-                    .attr("transform",
-                            "translate(" + Math.floor(viz1a.dims.innerWidth/2 - viz1a.margin.left/2) + " ," + 
-                                        (viz1a.dims.innerHeight + viz1a.margin.top + 15) + ")")
-                    .style("text-anchor", "middle")
-                    .attr("font-family", "sans-serif")
-                    .attr("font-size", FONT_SIZES.axisTitle)
-                    .text("");
                 
                 // x-axis gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
@@ -415,6 +404,14 @@
                 viz1a.tooltip = d3.select("body")
                                 .append("div")
                                 .classed("viz1a tooltip", true);
+
+
+                viz1a.title = viz1a.svg.append("text")
+                    .classed("viz1a title", true)
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("text-anchor", "start")  
+                    .style("font-size", "16px");
 
                 /****************************
                 * Set up date slider
