@@ -293,7 +293,8 @@
                             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
                             .attr("y", d => viz1a.yScale(d.countryname))
                             .attr("height", viz1a.yScale.bandwidth())
-                            .attr("width", d => viz1a.xScale(d[attributeData]));
+                            // handle negative values if they arise by setting to 0
+                            .attr("width", d => viz1a.xScale(d[attributeData] >= 0 ? d[attributeData] : 0));
 
                 /**********************
                 
