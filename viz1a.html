@@ -270,7 +270,7 @@
 
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
-                let bars = viz1a.svg.selectAll("rect")
+                let bars = viz1a.svg.selectAll("rect.data")
                             .data(viz1aData, d => d.countryname);
 
                 bars.exit()
@@ -282,9 +282,32 @@
                 bars.enter()
                     .append("rect")
                         .attr("fill", d => continentColors(d.continent))
-                        .classed("viz1a bar", true)
+                        .classed("viz1a bar data", true)
                         .attr("id", function(d,i) {return "viz1a-bar" + i})
                         .merge(bars)
+                            .transition()
+                            .duration(shortenTransitions > 0 ? shortenTransitions : 500)
+                            .attr("y", d => viz1a.yScale(d.countryname))
+                            .attr("height", viz1a.yScale.bandwidth())
+                            .attr("width", d => viz1a.xScale(d[attributeData]));
+
+                /**********************
+                
+                ***********************/
+               let invisibleBars = viz1a.svg.selectAll("rect.invisible")
+                            .data(viz1aData, d => d.countryname);
+
+                invisibleBars.exit()
+                    .transition()
+                    .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+                    .style("fill-opacity", 0)
+                    .remove();
+
+                invisibleBars.enter()
+                    .append("rect")
+                        .attr("fill-opacity", "0.05")
+                        .classed("viz1a bar invisible", true)
+                        .merge(invisibleBars)
                             .on("mouseover", function() {
                                 d3.select(this).classed("hover-bar", true);
                             }).on("mousemove", function(event, d) {
@@ -302,7 +325,7 @@
                             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
                             .attr("y", d => viz1a.yScale(d.countryname))
                             .attr("height", viz1a.yScale.bandwidth())
-                            .attr("width", d => viz1a.xScale(d[attributeData]));
+                            .attr("width", d => viz1a.xScale(viz1a.xScale.domain()[1]));
 
                 /**********************
                  * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0)
@@ -429,7 +452,6 @@
                     .call(d3.drag()
                         .on("start.interrupt", function() { viz1a.svgSlider.interrupt(); })
                         .on("start drag", function(event, d) {
-                            console.log("draggs");
                             shortenTransitions = 100;  // shorten all transition durations to 100ms
                             viz1a.dateSliderValue = event.x;
                             dateUpdate(viz1a); 
@@ -470,7 +492,7 @@
                             clearInterval(viz1a.dateTimer);
                             button.text("Play");
                         } else {
-                            viz1a.dateTimer = setInterval(dateStep, 800, viz1a);
+                            viz1a.dateTimer = setInterval(dateStep, 400, viz1a);
                             button.text("Pause");
                         }
                     });
