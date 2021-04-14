@@ -64,7 +64,9 @@
         <div class="spinner"></div>
 
         <!-- to be populated using unique countries in dataset -->
-        <select name="viz1a-countries" id="viz1a-countries" multiple></select>
+        <select name="viz1-countries" id="viz1-countries" multiple></select>
+        <br><br>
+        <label for="viz1-attributes">Attribute: </label><select name="viz1-attributes" id="viz1-attributes"></select>
 
         <div class="viz1a"></div>
 
@@ -89,10 +91,12 @@
             var covidData;
             var dataDict;
             var viz1aSelectedCountries = [];
+            var attribute;
 
             // TODO: delete this when ready for attribute dropdown and date slider
-            var attribute = "new_cases";  // for testing numeric attributes
+            //var attribute = "new_cases";  // for testing numeric attributes
             //var attribute = "c2_workplace_closing";  // for testing categorical attributes
+            
             var the_date = parseDate("2020-07-01");
 
             function dictRowParser(d) {
@@ -266,16 +270,8 @@
                 let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
 
                 // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
-                let attributeName = attribute;
+                let attributeName = var_metadata.display_name;
                 let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
-
-                // TODO: handle missing values (convert to 0) (use javascript .isNaN)
-                // test cases:
-                //  Liechtenstein: longest single word country
-                //  Peru: shortest single word country
-                //  United States: 2-word country
-                //  Bosnia and Herzegovina: 3-word country
-                //  Democratic Republic of Congo: longest length, and 4-word country
 
                 // in case we removed all the data, don't show any axes or gridlines
                 let axis_visibility = viz1aData.length == 0 ? "display:none" : "";
@@ -305,8 +301,7 @@
                 ******/
                 // see if this variable is ordinal; if it does, use its "_numeric" column
 
-                if((var_metadata.data_type == "ordinal") &&
-                        (viz1aData.length > 0)) {
+                if((var_metadata.data_type == "ordinal")) {
                     // get largest value over entire dataset, not just selection
                     let maxValue = d3.max(covidData, d => d[attributeData]);
 
@@ -316,7 +311,9 @@
                     viz1a.xAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
                 } else {
                     viz1a.xScale.domain([0, d3.max(viz1aData, d => d[attributeData])]);
-                    console.log(viz1a.xAxis.tickValues());
+                    
+                    // if we switched from an ordinal variable, get rid of the manually specified ticks
+                    viz1a.xAxis.tickValues(null);
                     viz1a.xAxisTicks.ticks(5);
                 }
 
@@ -365,7 +362,7 @@
                                     .style("top", event.pageY - 70 + "px")
                                     .style("display", "inline-block")
                                     // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
-                                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + d[attributeName]);
+                                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + d[attribute]);
                             }).on("mouseout", function() {
                                 d3.select(this).classed("hover-bar", false);
                                 viz1a.tooltip.style("display", "none");
@@ -388,25 +385,25 @@
             ]).then(function(files) {
                 dataDict = files[0];
                 covidData = files[1];
-                d3.selectAll(".spinner").remove();
+
                 console.log("Imported all data!");
 
-                // get unique countries and put those into the dropdown
+                /***************************
+                * Countries select list. Add countries to select list and set up "change" listener to redraw
+                **************************/
+                selectCountry = d3.select("select#viz1-countries");
+
+                // get unique countries, then append <option> to <select>
                 Array.from(new Set(covidData.map(d => d.countryname)))
                     .sort()  // put country names in order in dropdown menu
                     .forEach(function(country) {
-                        d3.select("select#viz1a-countries")
-                            .append('option')
+                        selectCountry.append('option')
                             .attr("value", country)
                             .text(country);
                     });
 
-                // populate the select list with countries
-
-                makeViz1a();
-                redrawViz1a();
-
-                d3.select("#viz1a-countries")
+                // create listener
+                selectCountry
                     .on("change", function() {
                         let countries = [];
 
@@ -417,10 +414,56 @@
                         // want to maintain ordering of original selection
                         viz1aSelectedCountries = viz1aSelectedCountries.filter(d => countries.includes(d));
                         added = countries.filter(d => !viz1aSelectedCountries.includes(d));
-                        viz1aSelectedCountries = viz1aSelectedCountries.concat(added)
+                        viz1aSelectedCountries = viz1aSelectedCountries.concat(added);
 
                         redrawViz1a();
                     });
+
+                
+                /***************************
+                * Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
+                **************************/
+                //add attributes to the attribute dropdown menu;
+                selectAttr = d3.select("select#viz1-attributes");
+
+                // first, put categories in as optgroups
+                Array.from(new Set(dataDict.filter(d => d.sort_order != 0)
+                                           .map(d => d.category)))
+                    .forEach(function(category) {
+                        selectAttr.append("optgroup")
+                            .attr("label", category);
+                    });
+                
+                // now put attributes into the optgroups
+                dataDict.filter(d => d.sort_order != 0)
+                        .map(d => ({category : d.category, 
+                                    variable_name : d.variable_name,
+                                    display_name : d.display_name}))
+                        .forEach(function(attrRow, i) {
+                            d3.select("optgroup[label='" + attrRow.category + "']")
+                                .append("option")
+                                .attr("value", attrRow.variable_name)
+                                .text(attrRow.display_name);
+                            
+                            // initialize attribute to first row in data dictionary
+                            if(i == 0) {attribute = attrRow.variable_name;}
+                        });
+                
+                // create listener
+                selectAttr
+                    .on("change", function() {
+                        attribute = d3.select(this)
+                                        .select("option:checked") 
+                                        .attr("value");  // want value (variable_name), not the text (display_name)
+                        redrawViz1a();
+                    });
+                
+                /***************************
+                * Create the viz!
+                **************************/
+                makeViz1a();
+                redrawViz1a();
+                d3.selectAll(".spinner").remove();
 
             }).catch(function(err) {
                 d3.selectAll(".spinner").remove();
