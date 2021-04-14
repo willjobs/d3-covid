@@ -292,6 +292,9 @@
                             .attr("height", viz1a.yScale.bandwidth())
                             .attr("width", d => viz1a.xScale(d[attributeData]));
 
+                /**********************
+                 * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0)
+                **********************/
                 let noData = viz1a.svg.selectAll("text.no-data")
                             .data(viz1aData, d => d.countryname);
 
@@ -308,8 +311,8 @@
                         .merge(noData)
                             .transition()
                             .duration(500)
-                            .attr("y", d => viz1a.yScale(d.countryname))
-                            .attr("dy", "0.9em")
+                            .attr("y", d => viz1a.yScale(d.countryname) + 0.5 * viz1a.yScale.bandwidth())
+                            .attr("dy", "0.3em")
                             .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
                             .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
             }
