@@ -5,68 +5,20 @@
         <link rel="icon" href="data:;base64,=">
         <title>Viz 1a</title>
         <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
-        <style type="text/css">
-            body {
-                font-family: sans-serif;
-            }
-            .spinner {
-                border: 16px solid #f3f3f3; /* Light grey */
-                border-top: 16px solid #3498db; /* Blue */
-                border-radius: 50%;
-                width: 120px;
-                height: 120px;
-                animation: spin 1s linear infinite;
-            }
-
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-
-            .hover-bar {
-                stroke-width: 1px;
-                stroke: white;
-                stroke-opacity: 0.5;
-                -webkit-filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
-                filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
-            }
-
-            .line {
-                fill: none;
-                stroke: steelblue;
-                stroke-width: 2px;
-            }
-
-            .grid line {
-                stroke: lightgrey;
-                stroke-opacity: 0.7;
-                shape-rendering: crispEdges;
-            }
-
-            .grid path {
-                stroke-width: 0;
-            }
-
-            .tooltip {
-                position: absolute;
-                display: none;
-                min-width: 80px;
-                height: auto;
-                background: none repeat scroll 0 0 #ffffff;
-                border: 1px solid #6F257F;
-                padding: 14px;
-                text-align: center;
-                border-radius: 10px;
-            }
-        </style>
+        <link rel="stylesheet" href="covid.css">
     </head>
     <body>
         <div class="spinner"></div>
 
-        <!-- to be populated using unique countries in dataset -->
         <select name="viz1-countries" id="viz1-countries" multiple></select>
         <br><br>
+
         <label for="viz1-attributes">Attribute: </label><select name="viz1-attributes" id="viz1-attributes"></select>
+        <br><br>
+
+        <div id="viz1a-date-slider-wrap" style="width:600px">
+            <button class="date-slider play-button">Play</button>
+        </div>
 
         <div class="viz1a"></div>
 
@@ -86,18 +38,22 @@
             var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
 
             var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
-            var formatDate = d3.timeFormat("%b %e");  // for converting dates to strings
+            var formatDate = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
+            var formatMonthYear = function (d) {
+                if(d3.timeFormat("%m")(d) == "01") {
+                    return d3.timeFormat("%Y")(d);
+                } else {
+                    return d3.timeFormat("%b")(d);
+                }
+            }
 
             var covidData;
             var dataDict;
             var viz1aSelectedCountries = [];
             var attribute;
 
-            // TODO: delete this when ready for attribute dropdown and date slider
-            //var attribute = "new_cases";  // for testing numeric attributes
-            //var attribute = "c2_workplace_closing";  // for testing categorical attributes
-            
-            var the_date = parseDate("2020-07-01");
+            // delete when ready for date slider
+            var theDate;
 
             function dictRowParser(d) {
                 return {
@@ -197,75 +153,38 @@
                 };
             }
 
+            // function used to handle updating dates from a date slider
 
-            function makeViz1a() {
-                viz1a.margin = {top: 20, right: 20, bottom: 40, left: 175};
+            function dateUpdate(viz, setDate = null) {
+                newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
 
-                viz1a.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
-                                                    d3.min([900, // no larger than 900px wide
-                                                            Math.floor(window.innerWidth / 2)])])};
-                viz1a.dims["innerHeight"] = viz1a.dims.height - viz1a.margin.top - viz1a.margin.bottom
-                viz1a.dims["innerWidth"] = viz1a.dims.width - viz1a.margin.left - viz1a.margin.right
+                // update position and text of label according to slider scale
+                viz.dateHandle.attr("cx", viz.dateXScale(newDate));
+                viz.dateLabel
+                    .attr("x", viz.dateXScale(newDate))
+                    .text(formatDate(newDate));
 
-                viz1a.svg = d3.select("div.viz1a")
-                                .append("svg")
-                                    .attr("width", viz1a.dims.width)
-                                    .attr("height", viz1a.dims.height)
-                                    .classed("viz1a", true)
-                                .append("g")
-                                    .attr("transform", "translate(" + viz1a.margin.left + "," + viz1a.margin.top + ")");
-
-                viz1a.yScale = d3.scaleBand()
-                                .rangeRound([0, viz1a.dims.innerHeight - 10])
-                                .paddingInner(0.1);
-
-                viz1a.xScale = d3.scaleLinear()
-                                .rangeRound([0, viz1a.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
-
-                // make y-axis
-                viz1a.svg.append("g")
-                    .classed("viz1a y axis", true);
-
-                viz1a.yAxis = d3.axisLeft(viz1a.yScale);
-                
-                // make x-axis
-                viz1a.svg.append("g")
-                    .classed("viz1a x axis", true)
-                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
-
-                viz1a.xAxis = d3.axisBottom(viz1a.xScale);
-
-                // x-axis title
-                viz1a.svg.append("text")
-                    .classed("viz1a x axis-title", true)
-                    .attr("transform",
-                            "translate(" + Math.floor(viz1a.dims.innerWidth/2 - viz1a.margin.left/2) + " ," + 
-                                        (viz1a.dims.innerHeight + viz1a.margin.top + 15) + ")")
-                    .style("text-anchor", "middle")
-                    .attr("font-family", "sans-serif")
-                    .attr("font-size", FONT_SIZES.axisTitle)
-                    .text("");
-                
-                // x-axis gridlines
-                // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                viz1a.svg.append("g")
-                    .classed("viz1a x grid", true)
-                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
-                
-                viz1a.xAxisTicks = d3.axisBottom(viz1a.xScale)
-                                    .tickSize(-viz1a.dims.innerHeight)
-                                    .tickFormat("");
-
-                viz1a.tooltip = d3.select("body")
-                                .append("div")
-                                .classed("viz1a tooltip", true);
-
+                theDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
+                viz.redrawFunc();
             }
             
+            // function used to move date slider forward one day
+            function dateStep(viz) {
+                if(viz.dateSliderValue < 0) {
+                    viz.dateSliderValue = 0;
+                }
+                dateUpdate(viz);
+                viz.dateSliderValue = Math.floor(viz.dateSliderValue + (viz.dateSliderWidth / 151));
+                if (viz.dateSliderValue > viz.dateSliderWidth) {
+                    viz.dateSliderValue = 0;
+                    clearInterval(viz.dateTimer);
+                    viz.playButton.text("Play");
+                }
+            }
 
             function redrawViz1a() {
                 let viz1aData = covidData.filter(d => viz1aSelectedCountries.includes(d.countryname) && 
-                                                     d.date.getTime() == the_date.getTime());
+                                                      d.date.getTime() == theDate.getTime());
 
                 let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
 
@@ -373,9 +292,171 @@
                             .attr("height", viz1a.yScale.bandwidth())
                             .attr("width", d => viz1a.xScale(d[attributeData]));
 
-                // Add a transparent bar on top that extends the width of the chart so we can activate
-                //     the hover effect at any point along axis in the case of short bars.
-                // Also include a tooltip! (reference: https://bl.ocks.org/alandunning/274bf248fd0f362d64674920e85c1eb7)
+                let noData = viz1a.svg.selectAll("text.no-data")
+                            .data(viz1aData, d => d.countryname);
+
+                noData.exit()
+                    .transition()
+                    .duration(300)
+                    .style("fill-opacity", 0)
+                    .remove();
+
+                noData.enter()
+                    .append("text")
+                        .classed("viz1a no-data", true)
+                        .attr("id", function(d,i) {return "viz1a-nodata" + i})
+                        .merge(noData)
+                            .transition()
+                            .duration(500)
+                            .attr("y", d => viz1a.yScale(d.countryname))
+                            .attr("dy", "0.9em")
+                            .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
+                            .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
+            }
+
+            function makeViz1a() {
+                viz1a.redrawFunc = redrawViz1a;  // need this to be able to handle timestep updates
+
+                viz1a.margin = {top: 20, right: 20, bottom: 40, left: 175};
+
+                viz1a.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
+                                                    d3.min([900, // no larger than 900px wide
+                                                            Math.floor(window.innerWidth / 2)])])};
+                viz1a.dims["innerHeight"] = viz1a.dims.height - viz1a.margin.top - viz1a.margin.bottom
+                viz1a.dims["innerWidth"] = viz1a.dims.width - viz1a.margin.left - viz1a.margin.right
+
+                viz1a.svg = d3.select("div.viz1a")
+                                .append("svg")
+                                    .attr("width", viz1a.dims.width)
+                                    .attr("height", viz1a.dims.height)
+                                    .classed("viz1a", true)
+                                .append("g")
+                                    .attr("transform", "translate(" + viz1a.margin.left + "," + viz1a.margin.top + ")");
+
+                viz1a.yScale = d3.scaleBand()
+                                .rangeRound([0, viz1a.dims.innerHeight - 10])
+                                .paddingInner(0.1);
+
+                viz1a.xScale = d3.scaleLinear()
+                                .rangeRound([0, viz1a.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+
+                // make y-axis
+                viz1a.svg.append("g")
+                    .classed("viz1a y axis", true);
+
+                viz1a.yAxis = d3.axisLeft(viz1a.yScale);
+                
+                // make x-axis
+                viz1a.svg.append("g")
+                    .classed("viz1a x axis", true)
+                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
+
+                viz1a.xAxis = d3.axisBottom(viz1a.xScale);
+
+                // x-axis title
+                viz1a.svg.append("text")
+                    .classed("viz1a x axis-title", true)
+                    .attr("transform",
+                            "translate(" + Math.floor(viz1a.dims.innerWidth/2 - viz1a.margin.left/2) + " ," + 
+                                        (viz1a.dims.innerHeight + viz1a.margin.top + 15) + ")")
+                    .style("text-anchor", "middle")
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", FONT_SIZES.axisTitle)
+                    .text("");
+                
+                // x-axis gridlines
+                // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+                viz1a.svg.append("g")
+                    .classed("viz1a x grid", true)
+                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
+                
+                viz1a.xAxisTicks = d3.axisBottom(viz1a.xScale)
+                                    .tickSize(-viz1a.dims.innerHeight)
+                                    .tickFormat("");
+
+                viz1a.tooltip = d3.select("body")
+                                .append("div")
+                                .classed("viz1a tooltip", true);
+
+                /****************************
+                * Set up date slider
+                * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
+                ***************************/
+                viz1a.dateSliderValue = 0;
+                viz1a.dateSliderWidth = 400;
+                
+                let minDate = d3.min(covidData, d => d.date);
+                let maxDate = d3.max(covidData, d => d.date);
+
+                viz1a.dateXScale = d3.scaleTime()
+                                        .domain([minDate, maxDate])
+                                        .range([0, viz1a.dateSliderWidth])
+                                        .clamp(true);  // prevent dot from going off scale
+                
+                viz1a.svgSlider = d3.select("#viz1a-date-slider-wrap")
+                                    .append("svg")
+                                        .attr("width", viz1a.dateSliderWidth+100)
+                                        .attr("height", "100")
+                                        .style("vertical-align", "top")
+                                        .attr("transform", "translate(0, -15)")
+                                    .append("g")
+                                        .attr("class", "slider")
+                                        .attr("transform", "translate(50,50)");
+
+                viz1a.svgSlider.append("line")
+                    .attr("class", "date-slider track")
+                    .attr("x1", viz1a.dateXScale.range()[0])
+                    .attr("x2", viz1a.dateXScale.range()[1])
+                .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+                    .attr("class", "date-slider track-inset")
+                .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+                    .attr("class", "date-slider track-overlay")
+                    .call(d3.drag()
+                        .on("start.interrupt", function() { viz1a.svgSlider.interrupt(); })
+                        .on("start drag", function(event, d) {
+                            viz1a.dateSliderValue = event.x;
+                            dateUpdate(viz1a); 
+                        })
+                    );
+                
+                viz1a.svgSlider.insert("g", ".date-slider.track-overlay")
+                    .attr("class", "date-slider date-ticks")
+                    .attr("transform", "translate(0," + 18 + ")")
+                .selectAll("text")
+                    .data(viz1a.dateXScale.ticks(10))
+                    .enter()
+                    .append("text")
+                    .attr("x", viz1a.dateXScale)
+                    .attr("y", 10)
+                    .attr("text-anchor", "middle")
+                    .text(function(d) { return formatMonthYear(d); });
+
+                viz1a.dateHandle = viz1a.svgSlider.insert("circle", ".date-slider.track-overlay")
+                    .attr("class", "date-slider handle")
+                    .attr("r", 9);
+
+                viz1a.dateLabel = viz1a.svgSlider.append("text")
+                    .attr("class", "label")
+                    .attr("text-anchor", "middle")
+                    .text(formatDate(minDate))
+                    .attr("transform", "translate(0," + (-25) + ")");
+
+
+                viz1a.playButton = d3.select("#viz1a-date-slider-wrap .play-button");
+                viz1a.playButton
+                    .on("click", function() {
+                        let button = d3.select(this);
+                        if (button.text() == "Pause") {
+                            clearInterval(viz1a.dateTimer);
+                            button.text("Play");
+                        } else {
+                            viz1a.dateTimer = setInterval(dateStep, 800, viz1a);
+                            button.text("Pause");
+                        }
+                    });
+                
+                theDate = maxDate;
+                dateUpdate(viz1a, maxDate);
             }
 
             // load the data and kick things off
