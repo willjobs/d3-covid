@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <link rel="icon" href="data:;base64,=">
-        <title>Viz 1a</title>
+        <title>Viz 1b</title>
         <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
         <link rel="stylesheet" href="covid.css">
     </head>
@@ -16,11 +16,11 @@
         <label for="viz1-attributes">Attribute: </label><select name="viz1-attributes" id="viz1-attributes"></select>
         <br><br>
 
-        <div id="viz1a-date-slider-wrap" style="width:600px">
+        <div id="viz1b-date-slider-wrap" style="width:600px">
             <button class="date-slider play-button">Play</button>
         </div>
 
-        <div class="viz1a"></div>
+        <div class="viz1b"></div>
 
         <script type="text/javascript">
             // NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
@@ -35,7 +35,7 @@
             const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
                                         .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
 
-            var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
+            var viz1b = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1b
 
             var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
             var formatDate = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
@@ -49,7 +49,7 @@
 
             var covidData;
             var dataDict;
-            var viz1aSelectedCountries = [];
+            var viz1bSelectedCountries = [];
             var attribute;
             var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
 
@@ -183,9 +183,9 @@
                 }
             }
 
-            function redrawViz1a() {
+            function redrawViz1b() {
 
-                let viz1aData = covidData.filter(d => viz1aSelectedCountries.includes(d.countryname) && 
+                let viz1bData = covidData.filter(d => viz1bSelectedCountries.includes(d.countryname) && 
                                                       d.date.getTime() == theDate.getTime());
 
                 let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
@@ -195,29 +195,29 @@
                 let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
 
                 // in case we removed all the data, don't show any axes or gridlines
-                let axis_visibility = viz1aData.length == 0 ? "display:none" : "";
+                let axis_visibility = viz1bData.length == 0 ? "display:none" : "";
                 d3.selectAll(".x").attr("style", axis_visibility);
                 d3.selectAll(".y").attr("style", axis_visibility);
                 d3.selectAll(".grid").attr("style", axis_visibility);
 
-                viz1a.title.text(attributeName + " on " + formatDate(theDate));
+                viz1b.title.text(attributeName + " on " + formatDate(theDate));
 
                 /******
                  * update y-axis
                 ******/
                 //** Doing it this way so that we can maintain the order in which the user selected countries
                 // Uncomment the below if you want to do it in the order of the dataset, not the user's selection:
-                //      viz1a.yScale.domain(viz1aData.map(d => d.countryname));
-                viz1a.yScale.domain(viz1aSelectedCountries);
+                //      viz1b.yScale.domain(viz1bData.map(d => d.countryname));
+                viz1b.yScale.domain(viz1bSelectedCountries);
 
-                d3.select(".viz1a.y.axis")
+                d3.select(".viz1b.y.axis")
                     .transition()
                     .duration(500)
-                    .call(viz1a.yAxis);
+                    .call(viz1b.yAxis);
 
                 // remove y-axis ticks and vertical black line
-                d3.selectAll(".viz1a.y.axis .tick line").remove();
-                d3.selectAll(".viz1a.y.axis path").remove();
+                d3.selectAll(".viz1b.y.axis .tick line").remove();
+                d3.selectAll(".viz1b.y.axis path").remove();
 
                 /******
                  * update x-axis
@@ -230,8 +230,8 @@
 
                     // set tick values to exactly these values
                     // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
-                    viz1a.xScale.domain([0, maxValue]);
-                    viz1a.xAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
+                    viz1b.xScale.domain([0, maxValue]);
+                    viz1b.xAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
                 } else {
                     // If we're showing an aggregate index like "stringency index", always show 0 to 100.
                     // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
@@ -240,42 +240,42 @@
                     if(var_metadata.category == 'aggregate indices') {
                         maxValue =  100.0;
                     } else{
-                        maxValue = d3.max(covidData.filter(d => viz1aSelectedCountries.includes(d.countryname)),
+                        maxValue = d3.max(covidData.filter(d => viz1bSelectedCountries.includes(d.countryname)),
                                           d => d[attributeData]);
                     }
                     
-                    viz1a.xScale.domain([0, maxValue]);
+                    viz1b.xScale.domain([0, maxValue]);
 
                     // if we switched from an ordinal variable, get rid of the manually specified ticks
-                    viz1a.xAxis.tickValues(null);
-                    viz1a.xAxisTicks.ticks(5);
+                    viz1b.xAxis.tickValues(null);
+                    viz1b.xAxisTicks.ticks(5);
                 }
 
 
-                d3.select(".viz1a.x.axis")
+                d3.select(".viz1b.x.axis")
                     .transition()
                     .duration(shortenTransitions > 0 ? shortenTransitions : 300)
-                    .call(viz1a.xAxis);
+                    .call(viz1b.xAxis);
 
                 // add the X gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                d3.select(".viz1a.grid")
-                    .call(viz1a.xAxisTicks);
+                d3.select(".viz1b.grid")
+                    .call(viz1b.xAxisTicks);
 
                 // set all ticks' fonts. These aren't styles/CSS, these are attributes
-                d3.selectAll(".viz1a.axis")
+                d3.selectAll(".viz1b.axis")
                     .attr("font-size", FONT_SIZES.tick)
                     .attr("font-family", "sans-serif");
                 
                 // rotate x-axis ticks
-                d3.selectAll('.viz1a.x.axis .tick text')
+                d3.selectAll('.viz1b.x.axis .tick text')
                     .attr("transform","rotate(-45)")
                     .attr("text-anchor","end");
 
                 // Create the bars: there will be one with the actual data, and one that is invisible
                 // which extends the length of the chart and activates the hover effect
-                let bars = viz1a.svg.selectAll("rect.data")
-                            .data(viz1aData, d => d.countryname);
+                let bars = viz1b.svg.selectAll("rect.data")
+                            .data(viz1bData, d => d.countryname);
 
                 bars.exit()
                     .transition()
@@ -286,21 +286,21 @@
                 bars.enter()
                     .append("rect")
                         .attr("fill", d => continentColors(d.continent))
-                        .classed("viz1a bar data", true)
-                        .attr("id", function(d,i) {return "viz1a-bar" + i})
+                        .classed("viz1b bar data", true)
+                        .attr("id", function(d,i) {return "viz1b-bar" + i})
                         .merge(bars)
                             .transition()
                             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-                            .attr("y", d => viz1a.yScale(d.countryname))
-                            .attr("height", viz1a.yScale.bandwidth())
+                            .attr("y", d => viz1b.yScale(d.countryname))
+                            .attr("height", viz1b.yScale.bandwidth())
                             // handle negative values if they arise by setting to 0
-                            .attr("width", d => viz1a.xScale(d[attributeData] >= 0 ? d[attributeData] : 0));
+                            .attr("width", d => viz1b.xScale(d[attributeData] >= 0 ? d[attributeData] : 0));
 
                 /**********************
                 
                 ***********************/
-               let invisibleBars = viz1a.svg.selectAll("rect.invisible")
-                            .data(viz1aData, d => d.countryname);
+               let invisibleBars = viz1b.svg.selectAll("rect.invisible")
+                            .data(viz1bData, d => d.countryname);
 
                 invisibleBars.exit()
                     .transition()
@@ -311,12 +311,12 @@
                 invisibleBars.enter()
                     .append("rect")
                         .attr("fill-opacity", "0.05")
-                        .classed("viz1a bar invisible", true)
+                        .classed("viz1b bar invisible", true)
                         .merge(invisibleBars)
                             .on("mouseover", function() {
                                 d3.select(this).classed("hover-bar", true);
                             }).on("mousemove", function(event, d) {
-                                viz1a.tooltip
+                                viz1b.tooltip
                                     .style("left", event.pageX - 50 + "px")
                                     .style("top", event.pageY - 70 + "px")
                                     .style("display", "inline-block")
@@ -325,19 +325,19 @@
                                     .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
                             }).on("mouseout", function() {
                                 d3.select(this).classed("hover-bar", false);
-                                viz1a.tooltip.style("display", "none");
+                                viz1b.tooltip.style("display", "none");
                             })
                             .transition()
                             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-                            .attr("y", d => viz1a.yScale(d.countryname))
-                            .attr("height", viz1a.yScale.bandwidth())
-                            .attr("width", d => viz1a.xScale(viz1a.xScale.domain()[1]));
+                            .attr("y", d => viz1b.yScale(d.countryname))
+                            .attr("height", viz1b.yScale.bandwidth())
+                            .attr("width", d => viz1b.xScale(viz1b.xScale.domain()[1]));
 
                 /**********************
                  * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0)
                 **********************/
-                let noData = viz1a.svg.selectAll("text.no-data")
-                            .data(viz1aData, d => d.countryname);
+                let noData = viz1b.svg.selectAll("text.no-data")
+                            .data(viz1bData, d => d.countryname);
 
                 noData.exit()
                     .transition()
@@ -347,72 +347,72 @@
 
                 noData.enter()
                     .append("text")
-                        .classed("viz1a no-data", true)
-                        .attr("id", function(d,i) {return "viz1a-nodata" + i})
+                        .classed("viz1b no-data", true)
+                        .attr("id", function(d,i) {return "viz1b-nodata" + i})
                         .merge(noData)
                             .transition()
                             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-                            .attr("y", d => viz1a.yScale(d.countryname) + 0.5 * viz1a.yScale.bandwidth())
+                            .attr("y", d => viz1b.yScale(d.countryname) + 0.5 * viz1b.yScale.bandwidth())
                             .attr("dy", "0.3em")
                             .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
                             .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
             }
 
-            function makeViz1a() {
-                viz1a.redrawFunc = redrawViz1a;  // need this to be able to handle timestep updates
+            function makeViz1b() {
+                viz1b.redrawFunc = redrawViz1b;  // need this to be able to handle timestep updates
 
-                viz1a.margin = {top: 30, right: 20, bottom: 80, left: 175};
+                viz1b.margin = {top: 30, right: 20, bottom: 80, left: 175};
 
-                viz1a.dims = {height: 450, width: d3.max([600,  // no smaller than 600px wide
+                viz1b.dims = {height: 450, width: d3.max([600,  // no smaller than 600px wide
                                                     d3.min([900, // no larger than 900px wide
                                                             Math.floor(window.innerWidth / 2)])])};
-                viz1a.dims["innerHeight"] = viz1a.dims.height - viz1a.margin.top - viz1a.margin.bottom
-                viz1a.dims["innerWidth"] = viz1a.dims.width - viz1a.margin.left - viz1a.margin.right
+                viz1b.dims["innerHeight"] = viz1b.dims.height - viz1b.margin.top - viz1b.margin.bottom
+                viz1b.dims["innerWidth"] = viz1b.dims.width - viz1b.margin.left - viz1b.margin.right
 
-                viz1a.svg = d3.select("div.viz1a")
+                viz1b.svg = d3.select("div.viz1b")
                                 .append("svg")
-                                    .attr("width", viz1a.dims.width)
-                                    .attr("height", viz1a.dims.height)
-                                    .classed("viz1a", true)
+                                    .attr("width", viz1b.dims.width)
+                                    .attr("height", viz1b.dims.height)
+                                    .classed("viz1b", true)
                                 .append("g")
-                                    .attr("transform", "translate(" + viz1a.margin.left + "," + viz1a.margin.top + ")");
+                                    .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
 
-                viz1a.yScale = d3.scaleBand()
-                                .rangeRound([0, viz1a.dims.innerHeight - 10])
+                viz1b.yScale = d3.scaleBand()
+                                .rangeRound([0, viz1b.dims.innerHeight - 10])
                                 .paddingInner(0.1);
 
-                viz1a.xScale = d3.scaleLinear()
-                                .rangeRound([0, viz1a.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+                viz1b.xScale = d3.scaleLinear()
+                                .rangeRound([0, viz1b.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
 
                 // make y-axis
-                viz1a.svg.append("g")
-                    .classed("viz1a y axis", true);
+                viz1b.svg.append("g")
+                    .classed("viz1b y axis", true);
 
-                viz1a.yAxis = d3.axisLeft(viz1a.yScale);
+                viz1b.yAxis = d3.axisLeft(viz1b.yScale);
                 
                 // make x-axis
-                viz1a.svg.append("g")
-                    .classed("viz1a x axis", true)
-                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
+                viz1b.svg.append("g")
+                    .classed("viz1b x axis", true)
+                    .attr("transform", "translate(0," + viz1b.dims.innerHeight + ")");
 
-                viz1a.xAxis = d3.axisBottom(viz1a.xScale);
+                viz1b.xAxis = d3.axisBottom(viz1b.xScale);
                 
                 // x-axis gridlines
                 // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-                viz1a.svg.append("g")
-                    .classed("viz1a x grid", true)
-                    .attr("transform", "translate(0," + viz1a.dims.innerHeight + ")");
+                viz1b.svg.append("g")
+                    .classed("viz1b x grid", true)
+                    .attr("transform", "translate(0," + viz1b.dims.innerHeight + ")");
                 
-                viz1a.xAxisTicks = d3.axisBottom(viz1a.xScale)
-                                    .tickSize(-viz1a.dims.innerHeight)
+                viz1b.xAxisTicks = d3.axisBottom(viz1b.xScale)
+                                    .tickSize(-viz1b.dims.innerHeight)
                                     .tickFormat("");
 
-                viz1a.tooltip = d3.select("body")
+                viz1b.tooltip = d3.select("body")
                                 .append("div")
-                                .classed("viz1a tooltip", true);
+                                .classed("viz1b tooltip", true);
 
-                viz1a.title = viz1a.svg.append("text")
-                    .classed("viz1a title", true)
+                viz1b.title = viz1b.svg.append("text")
+                    .classed("viz1b title", true)
                     .attr("x", 0)
                     .attr("y", 0)
                     .attr("text-anchor", "start")
@@ -423,20 +423,20 @@
                 * Set up date slider
                 * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
                 ***************************/
-                viz1a.dateSliderValue = 0;
-                viz1a.dateSliderWidth = 400;
+                viz1b.dateSliderValue = 0;
+                viz1b.dateSliderWidth = 400;
                 
                 let minDate = d3.min(covidData, d => d.date);
                 let maxDate = d3.max(covidData, d => d.date);
 
-                viz1a.dateXScale = d3.scaleTime()
+                viz1b.dateXScale = d3.scaleTime()
                                         .domain([minDate, maxDate])
-                                        .range([0, viz1a.dateSliderWidth])
+                                        .range([0, viz1b.dateSliderWidth])
                                         .clamp(true);  // prevent dot from going off scale
                 
-                viz1a.svgSlider = d3.select("#viz1a-date-slider-wrap")
+                viz1b.svgSlider = d3.select("#viz1b-date-slider-wrap")
                                     .append("svg")
-                                        .attr("width", viz1a.dateSliderWidth+100)
+                                        .attr("width", viz1b.dateSliderWidth+100)
                                         .attr("height", "100")
                                         .style("vertical-align", "top")
                                         .attr("transform", "translate(0, -15)")
@@ -444,64 +444,64 @@
                                         .attr("class", "slider")
                                         .attr("transform", "translate(50,50)");
 
-                viz1a.svgSlider.append("line")
+                viz1b.svgSlider.append("line")
                     .attr("class", "date-slider track")
-                    .attr("x1", viz1a.dateXScale.range()[0])
-                    .attr("x2", viz1a.dateXScale.range()[1])
+                    .attr("x1", viz1b.dateXScale.range()[0])
+                    .attr("x2", viz1b.dateXScale.range()[1])
                 .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
                     .attr("class", "date-slider track-inset")
                 .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
                     .attr("class", "date-slider track-overlay")
                     .call(d3.drag()
-                        .on("start.interrupt", function() { viz1a.svgSlider.interrupt(); })
+                        .on("start.interrupt", function() { viz1b.svgSlider.interrupt(); })
                         .on("start drag", function(event, d) {
                             shortenTransitions = 100;  // shorten all transition durations to 100ms
-                            viz1a.dateSliderValue = event.x;
-                            dateUpdate(viz1a); 
+                            viz1b.dateSliderValue = event.x;
+                            dateUpdate(viz1b); 
                         })
                         .on("end", function() {
                             shortenTransitions = 0;  // go back to normal transitions
                         })
                     );
                 
-                viz1a.svgSlider.insert("g", ".date-slider.track-overlay")
+                viz1b.svgSlider.insert("g", ".date-slider.track-overlay")
                     .attr("class", "date-slider date-ticks")
                     .attr("transform", "translate(0," + 18 + ")")
                 .selectAll("text")
-                    .data(viz1a.dateXScale.ticks(10))
+                    .data(viz1b.dateXScale.ticks(10))
                     .enter()
                     .append("text")
-                    .attr("x", viz1a.dateXScale)
+                    .attr("x", viz1b.dateXScale)
                     .attr("y", 10)
                     .attr("text-anchor", "middle")
                     .text(function(d) { return formatMonthYear(d); });
 
-                viz1a.dateHandle = viz1a.svgSlider.insert("circle", ".date-slider.track-overlay")
+                viz1b.dateHandle = viz1b.svgSlider.insert("circle", ".date-slider.track-overlay")
                     .attr("class", "date-slider handle")
                     .attr("r", 9);
 
-                viz1a.dateLabel = viz1a.svgSlider.append("text")
+                viz1b.dateLabel = viz1b.svgSlider.append("text")
                     .attr("class", "label")
                     .attr("text-anchor", "middle")
                     .text(formatDate(minDate))
                     .attr("transform", "translate(0," + (-25) + ")");
 
 
-                viz1a.playButton = d3.select("#viz1a-date-slider-wrap .play-button");
-                viz1a.playButton
+                viz1b.playButton = d3.select("#viz1b-date-slider-wrap .play-button");
+                viz1b.playButton
                     .on("click", function() {
                         let button = d3.select(this);
                         if (button.text() == "Pause") {
-                            clearInterval(viz1a.dateTimer);
+                            clearInterval(viz1b.dateTimer);
                             button.text("Play");
                         } else {
-                            viz1a.dateTimer = setInterval(dateStep, 400, viz1a);
+                            viz1b.dateTimer = setInterval(dateStep, 400, viz1b);
                             button.text("Pause");
                         }
                     });
                 
                 theDate = maxDate;
-                dateUpdate(viz1a, maxDate);
+                dateUpdate(viz1b, maxDate);
             }
 
             // load the data and kick things off
@@ -538,11 +538,11 @@
                             .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
 
                         // want to maintain ordering of original selection
-                        viz1aSelectedCountries = viz1aSelectedCountries.filter(d => countries.includes(d));
-                        added = countries.filter(d => !viz1aSelectedCountries.includes(d));
-                        viz1aSelectedCountries = viz1aSelectedCountries.concat(added);
+                        viz1bSelectedCountries = viz1bSelectedCountries.filter(d => countries.includes(d));
+                        added = countries.filter(d => !viz1bSelectedCountries.includes(d));
+                        viz1bSelectedCountries = viz1bSelectedCountries.concat(added);
 
-                        redrawViz1a();
+                        redrawViz1b();
                     });
 
                 
@@ -581,14 +581,14 @@
                         attribute = d3.select(this)
                                         .select("option:checked") 
                                         .attr("value");  // want value (variable_name), not the text (display_name)
-                        redrawViz1a();
+                        redrawViz1b();
                     });
                 
                 /***************************
                 * Create the viz!
                 **************************/
-                makeViz1a();
-                redrawViz1a();
+                makeViz1b();
+                redrawViz1b();
                 d3.selectAll(".spinner").remove();
 
             }).catch(function(err) {
