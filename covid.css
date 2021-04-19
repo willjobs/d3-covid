@@ -23,10 +23,10 @@ body {
     filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
 }
 
-.line {
-    fill: none;
-    stroke: steelblue;
+.hover-line {
     stroke-width: 2px;
+    -webkit-filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
+    filter: drop-shadow( 2px 2px 2px rgba(0, 0, 0, .6));
 }
 
 .grid line {
