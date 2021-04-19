@@ -29,7 +29,7 @@
                 tick: 12,
                 axisTitle: 14,
                 title: 16,
-                markerText: 10
+                markerText: 12
             }
 
             // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
@@ -56,7 +56,6 @@
             var attribute;
             var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
 
-            // delete when ready for date slider
             var theDate;
 
             function dictRowParser(d) {
@@ -190,26 +189,34 @@
                 // get all data for selected countries
                 let viz1cData = covidData.filter(d => viz1cSelectedCountries.includes(d.countryname));
 
-                let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
+                let varMetadata = dataDict.filter(d => d.variable_name == attribute)[0];
 
                 // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
-                viz1c.attributeName = var_metadata.display_name;
-                viz1c.attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
+                viz1c.attributeName = varMetadata.display_name;
+                viz1c.attributeData = varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : attribute;
 
                 // in case we removed all the data, don't show any axes or gridlines
-                let axis_visibility = viz1cData.length == 0 ? "display:none" : "display:inherit";
-                d3.selectAll(".x").attr("style", axis_visibility);
-                d3.selectAll(".y").attr("style", axis_visibility);
-                d3.selectAll(".grid").attr("style", axis_visibility);
-
+                let axisVisibility = viz1cData.length == 0 ? "display:none" : "display:inherit";
+                d3.selectAll(".x").attr("style", axisVisibility);
+                d3.selectAll(".y").attr("style", axisVisibility);
+                d3.selectAll(".grid").attr("style", axisVisibility);
+                
+                viz1c.dateLine
+                    .attr("style", axisVisibility)
+                    .transition()
+                    .duration(shortenTransitions > 0 ? 0 : 200)  // move the line immediately if dragging the time slider
+                    .attr("x1", viz1c.xScale(theDate))
+                    .attr("x2", viz1c.xScale(theDate));
+                
                 viz1c.title.text(viz1c.attributeName + " over time");
+                
 
                 /******
                  * update y-axis (attribute)
                 ******/
                 // see if this variable is ordinal; if it does, use its "_numeric" column
 
-                if((var_metadata.data_type == "ordinal")) {
+                if((varMetadata.data_type == "ordinal")) {
                     // get largest value over entire dataset, not just selection
                     let maxValue = d3.max(covidData, d => d[viz1c.attributeData]);
 
@@ -222,7 +229,7 @@
                     // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
                     //    the selected countries. This is because we don't want the scales to keep jumping 
                     //    around for a given set of countries and making it hard to see changes.
-                    if(var_metadata.category == 'aggregate indices') {
+                    if(varMetadata.category == 'aggregate indices') {
                         maxValue =  100.0;
                     } else{
                         maxValue = d3.max(covidData.filter(d => viz1cSelectedCountries.includes(d.countryname)),
@@ -254,10 +261,7 @@
 
                 /***
                  * TODOs:
-                 * - figure out why stroke is turning grey and staying that way
-                 * - change tooltip to being a div with white background?
-                 * - Update x-axis date format
-                 * - Create vertical dashed line indicating the selected date
+                 * - add ability to click on a line and keep the selected country in focus, with the tooltip staying on that line
                 ***************/
                 
                 // create a "nested" structure to allow us to draw one line per country
@@ -297,8 +301,8 @@
 
                 viz1c.margin = {top: 30, right: 40, bottom: 80, left: 80};
 
-                viz1c.dims = {height: 450, width: d3.max([600,  // no smaller than 600px wide
-                                                    d3.min([900, // no larger than 900px wide
+                viz1c.dims = {height: 500, width: d3.max([600,  // no smaller than 600px wide
+                                                    d3.min([700, // no larger than 900px wide
                                                             Math.floor(window.innerWidth / 2)])])};
                 viz1c.dims["innerHeight"] = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom
                 viz1c.dims["innerWidth"] = viz1c.dims.width - viz1c.margin.left - viz1c.margin.right
@@ -332,7 +336,8 @@
                                 .domain([minDate, maxDate])
                                 .rangeRound([0, viz1c.dims.innerWidth]);
 
-                viz1c.xAxis = d3.axisBottom(viz1c.xScale);
+                viz1c.xAxis = d3.axisBottom(viz1c.xScale)
+                                .tickFormat(formatMonthYear);
 
                 viz1c.svg.append("g")
                     .classed("viz1c x axis", true)
@@ -343,14 +348,14 @@
                 * x-axis gridlines
                 * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
                 ***************/
-                viz1c.xAxisTicks = d3.axisBottom(viz1c.xScale)
+                viz1c.xAxisGrid = d3.axisBottom(viz1c.xScale)
                                     .tickSize(-viz1c.dims.innerHeight)
                                     .tickFormat("");
 
                 viz1c.svg.append("g")
                     .classed("viz1c x grid", true)
                     .attr("transform", "translate(0," + viz1c.dims.innerHeight + ")")
-                    .call(viz1c.xAxisTicks);  // X-axis gridlines shouldn't change
+                    .call(viz1c.xAxisGrid);  // X-axis gridlines shouldn't change
 
                 /***************
                  * y-axis gridlines
@@ -383,7 +388,7 @@
                                 .map(d => parseDate(d));
 
                 /****************************
-                * Set up date slider
+                * Set up date slider and vertical line indicating the date
                 * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
                 ***************************/
                 viz1c.dateSliderValue = 0;
@@ -461,6 +466,19 @@
                     });
                 
                 theDate = maxDate;
+
+                viz1c.dateLine = viz1c.svg.append("line")
+                                    .classed("viz1c date-line", true)
+                                    .attr("stroke", "black")
+                                    .attr("stroke-width", 2)
+                                    .attr("stroke-dasharray", "3 3")
+                                    .attr("fill", "none")
+                                    .attr("x1", viz1c.xScale(theDate))
+                                    .attr("x2", viz1c.xScale(theDate))
+                                    .attr("y1", 0)
+                                    .attr("y2", viz1c.dims.innerHeight)
+                                    .lower();  // put the date line below the data
+
                 dateUpdate(viz1c, maxDate);
 
                 /**********
@@ -483,6 +501,7 @@
                     .classed("viz1c marker-text country", true)
                     .attr("font-family", "sans-serif")
                     .attr("font-size", FONT_SIZES.markerText)
+                    .attr("font-weight", "bold")
                     .attr("text-anchor", "end")  // right-aligned so that text doesn't go off the page
                     .attr("y", -20)
                     .attr("x", 5);
@@ -491,6 +510,7 @@
                     .classed("viz1c marker-text attribute", true)
                     .attr("font-family", "sans-serif")
                     .attr("font-size", FONT_SIZES.markerText)
+                    .attr("font-weight", "bold")
                     .attr("text-anchor", "end")
                     .attr("y", -8)
                     .attr("x", 5);
