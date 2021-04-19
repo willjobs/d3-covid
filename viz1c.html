@@ -290,7 +290,7 @@
                             .attr("fill", "none")
                             .merge(lines)
                                 .attr("stroke", d => continentColors(d[1][0].continent))  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
-                                .attr("id", d => "line-" + d[0])
+                                .attr("id", d => "line-" + d[0].replaceAll(" ", "-"))
                                 .transition()
                                 .duration(shortenTransitions > 0 ? shortenTransitions : 500)
                                 .attr("d", d => lineGenerator(d[1]));
@@ -521,6 +521,8 @@
                               So, we add a g element at the end of the svg (so it's on top of all the other elements in the svg),
                               and fill it with a rectangle shifted to match the visualization <g>.
                 ********/
+                let clicked = null;  // if a user clicks on a country, this will be a string with the country name
+
                 d3.select("svg.viz1c")
                     .append("g")
                         .attr("transform", "translate(" + viz1c.margin.left + "," + viz1c.margin.top + ")")
@@ -534,7 +536,11 @@
                         marker.attr("display", null);
                     }).on("mouseleave", function() {
                         marker.attr("display", "none");
-                        viz1c.svg.selectAll(".viz1c.line").attr("stroke", d => continentColors(d[1][0].continent));
+                        viz1c.svg.selectAll(".viz1c.line")
+                            .attr("stroke", d => continentColors(d[1][0].continent))
+                            .classed("hover-line", false);
+                    }).on("click", function () {
+                        //
                     }).on("mousemove", function() {
                         event.preventDefault();
 
@@ -542,9 +548,8 @@
                         let xm = viz1c.xScale.invert(pointer[0]);  // get date value associated with x position
                         let ym = viz1c.yScale.invert(pointer[1]); // get attribute value associated with y position
 
-                        if(xm < d3.min(viz1c.dates)) {
-                            return;
-                        }
+                        // if outside the plot area, exit
+                        if(xm < d3.min(viz1c.dates)) {return;}
 
                         let nearestDate = viz1c.dates[d3.bisectCenter(viz1c.dates, xm)];  // get the nearest date corresponding to the x-position of the mouse
 
@@ -571,7 +576,7 @@
                             .attr("stroke", function(d) {
                                 if(d[0] == closestCountryRow.countryname) {return continentColors(d[1][0].continent);}
                                 return "#ddd";
-                            });
+                            }).classed("hover-line", d => d[0] == closestCountryRow.countryname);
                         
                         // adjust marker text alignment to avoid text going off the svg
                         // if x-coordinate is in right 25% of SVG, make tooltips right-aligned; otherwise left-aligned
