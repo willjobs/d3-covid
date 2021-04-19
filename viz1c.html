@@ -197,7 +197,7 @@
                 viz1c.attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
 
                 // in case we removed all the data, don't show any axes or gridlines
-                let axis_visibility = viz1cData.length == 0 ? "display:none" : "";
+                let axis_visibility = viz1cData.length == 0 ? "display:none" : "display:inherit";
                 d3.selectAll(".x").attr("style", axis_visibility);
                 d3.selectAll(".y").attr("style", axis_visibility);
                 d3.selectAll(".grid").attr("style", axis_visibility);
@@ -270,23 +270,22 @@
                                         .x(d => viz1c.xScale(d.date))
                                         .y(d => viz1c.yScale(d[viz1c.attributeData] >= 0 ? d[viz1c.attributeData] : 0));
 
-                viz1c.lines = viz1c.svg.selectAll(".viz1c.line")
-                                .data(viz1c.nestedData, d => d[0]);  // "key" is the country name in the grouped dataset
+                let lines = viz1c.svg.selectAll(".viz1c.line")
+                                .data(viz1c.nestedData, d => d[0]);  // use the country name in d[0] as the "key" for merging later
 
-                viz1c.lines.exit()
+                lines.exit()
                             .transition()
                             .duration(shortenTransitions > 0 ? shortenTransitions : 200)
                             .style("stroke-opacity", 0)
                             .remove();
 
-                viz1c.lines.enter()
+                lines.enter()
                         .append("path")
                             .classed("viz1c line", true)
                             .attr("stroke-width", 1.5)
                             .attr("fill", "none")
-                            .merge(viz1c.lines)
+                            .merge(lines)
                                 .attr("stroke", d => continentColors(d[1][0].continent))  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
-                                .attr("stroke-opacity", 1)
                                 .attr("id", d => "line-" + d[0])
                                 .transition()
                                 .duration(shortenTransitions > 0 ? shortenTransitions : 500)
@@ -296,7 +295,7 @@
             function makeViz1c() {
                 viz1c.redrawFunc = redrawViz1c;  // need this to be able to handle timestep updates
 
-                viz1c.margin = {top: 30, right: 20, bottom: 80, left: 175};
+                viz1c.margin = {top: 30, right: 40, bottom: 80, left: 80};
 
                 viz1c.dims = {height: 450, width: d3.max([600,  // no smaller than 600px wide
                                                     d3.min([900, // no larger than 900px wide
@@ -472,7 +471,6 @@
                 viz1c.nestedData = null;
                 viz1c.attributeData = null;
                 viz1c.attributeName = null;
-                viz1c.lines = null;
 
                 const marker = viz1c.svg.append("g")
                                 .classed("viz1c marker", true)
@@ -497,41 +495,35 @@
                     .attr("y", -8)
                     .attr("x", 5);
 
-                viz1c.svg
+                /******** 
+                    Idea from https://bl.ocks.org/larsenmtl/e3b8b7c2ca4787f77d78f58d41c3da91
+                    Key idea: We can't hover over a <g> element because it doesn't detect mouse movements, only svg elements do.
+                              So, we add a g element at the end of the svg (so it's on top of all the other elements in the svg),
+                              and fill it with a rectangle shifted to match the visualization <g>.
+                ********/
+                d3.select("svg.viz1c")
+                    .append("g")
+                        .attr("transform", "translate(" + viz1c.margin.left + "," + viz1c.margin.top + ")")
+                        .attr("class", "mouse-over-effects")
+                    .append('rect')
+                        .attr('width', viz1c.dims.innerWidth)
+                        .attr('height', viz1c.dims.innerHeight)
+                        .attr('fill', 'none')
+                        .attr('pointer-events', 'all')
                     .on("mouseenter", function() {
-                        viz1c.lines.attr("stroke-opacity", 0.7);
                         marker.attr("display", null);
                     }).on("mouseleave", function() {
-                        viz1c.lines.attr("stroke-opacity", 1.0);
                         marker.attr("display", "none");
+                        viz1c.svg.selectAll(".viz1c.line").attr("stroke", d => continentColors(d[1][0].continent));
                     }).on("mousemove", function() {
                         event.preventDefault();
 
                         let pointer = d3.pointer(event, this);  // get x,y position of pointer
-
                         let xm = viz1c.xScale.invert(pointer[0]);  // get date value associated with x position
-                        if(xm < d3.min(viz1c.dates)) {return}
-
                         let ym = viz1c.yScale.invert(pointer[1]); // get attribute value associated with y position
 
-                        // adjust marker text alignment to avoid text going off the svg
-                        // if x-coordinate is in right 25% of SVG, make tooltips right-aligned; otherwise left-aligned
-                        // if y-coordinate is in top 10% of SVG, put tooltips *below* the cursor; otherwise above
-                        let markerTextAlign = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? "end" : "start");
-                        let markerX = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? -5 : 5);
-
-                        d3.selectAll(".marker-text")
-                            .attr("text-anchor", markerTextAlign)
-                            .attr("x", markerX);
-                        
-                        // since there are two textboxes with different y positions, we need to update one at a time
-                        // we also want to make sure that country is on top
-                        if (pointer[1] < viz1c.yScale.range()[0] * 0.1) {
-                            d3.selectAll(".marker-text.country").attr("y", 8);
-                            d3.selectAll(".marker-text.attribute").attr("y", 20);
-                        } else {
-                            d3.selectAll(".marker-text.country").attr("y", -20);
-                            d3.selectAll(".marker-text.attribute").attr("y", -8);
+                        if(xm < d3.min(viz1c.dates)) {
+                            return;
                         }
 
                         let nearestDate = viz1c.dates[d3.bisectCenter(viz1c.dates, xm)];  // get the nearest date corresponding to the x-position of the mouse
@@ -545,19 +537,47 @@
                                         });
                                         return rows;
                                     });
+                        if(data.length == 0) {return;}
 
                         // get row for country with nearest attribute value on this date
-                        let closest_country_row = d3.least(data, d => Math.abs(ym - d[0][viz1c.attributeData]))[0];
-                        //console.log(closest_country_row);
+                        let closestCountryRow = d3.least(data, function(d) {
+                                                                    const value = (isNaN(d[0][viz1c.attributeData]) ? 999999 : d[0][viz1c.attributeData]);
+                                                                    return Math.abs(ym - value);
+                                                                })[0];
+                        let closestValue = (isNaN(closestCountryRow[viz1c.attributeData]) ? 0 : closestCountryRow[viz1c.attributeData]);
 
                         // for the non-active lines, set them to light gray. For the active/hovered line, leave its stroke as the default blue
-                        viz1c.lines.attr("stroke", d => d === closest_country_row ? null : "#ddd");
-                                //.filter(d => d === closest_country_row).raise();  // bring to the front, in terms of what the mouse can click/hover on
+                        viz1c.svg.selectAll(".viz1c.line")
+                            .attr("stroke", function(d) {
+                                if(d[0] == closestCountryRow.countryname) {return continentColors(d[1][0].continent);}
+                                return "#ddd";
+                            });
                         
+                        // adjust marker text alignment to avoid text going off the svg
+                        // if x-coordinate is in right 25% of SVG, make tooltips right-aligned; otherwise left-aligned
+                        // if y-coordinate *of marker* is in top 10% of SVG, put tooltips *below* the cursor; otherwise above
+                        let markerTextAlign = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? "end" : "start");
+                        let markerX = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? -5 : 5);
+
+                        d3.selectAll(".marker-text")
+                            .attr("text-anchor", markerTextAlign)
+                            .attr("x", markerX);
+                        
+                        // since there are two textboxes with different y positions, we need to update one at a time
+                        // we also want to make sure that country is on top
+                        if (viz1c.yScale(closestValue) < viz1c.yScale.range()[0] * 0.1) {
+                            d3.selectAll(".marker-text.country").attr("y", 8);
+                            d3.selectAll(".marker-text.attribute").attr("y", 20);
+                        } else {
+                            d3.selectAll(".marker-text.country").attr("y", -20);
+                            d3.selectAll(".marker-text.attribute").attr("y", -8);
+                        }
+
                         // move the marker to the appropriate location on the line
-                        marker.attr("transform", `translate(${viz1c.xScale(nearestDate)}, ${viz1c.yScale(closest_country_row[viz1c.attributeData])})`);
-                        marker.select("text.marker-text.country").text(closest_country_row.countryname + ' (' + formatDateMonthDay(nearestDate) + ")");
-                        marker.select("text.marker-text.attribute").text(viz1c.attributeName + ": " + closest_country_row[viz1c.attributeData]);
+                        marker.attr("transform", `translate(${viz1c.xScale(nearestDate)}, ${viz1c.yScale(closestValue)})`);
+                        marker.select("text.marker-text.country").text(closestCountryRow.countryname + ' (' + formatDateMonthDay(nearestDate) + ")");
+                        marker.select("text.marker-text.attribute").text(viz1c.attributeName + ": " + closestCountryRow[viz1c.attributeData]);
+                        marker.raise();  // ensures that the text is always readable over the lines
                     });
             }
 
