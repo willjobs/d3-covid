@@ -508,6 +508,7 @@
             Promise.all([
                 d3.csv("../data/data_dictionary.csv", dictRowParser),
                 d3.csv("../data/covid_data.csv", dataRowParser),
+                //d3.csv("../data/covid_oxford+owid_20210414-185830.csv", dataRowParser),
             ]).then(function(files) {
                 dataDict = files[0];
                 covidData = files[1];
