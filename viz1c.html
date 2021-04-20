@@ -55,6 +55,7 @@
             var viz1cSelectedCountries = [];
             var attribute;
             var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
+            var clicked = null;  // if a user clicks on a country, this will be a string with the country name
 
             var theDate;
 
@@ -200,6 +201,7 @@
                 d3.selectAll(".x").attr("style", axisVisibility);
                 d3.selectAll(".y").attr("style", axisVisibility);
                 d3.selectAll(".grid").attr("style", axisVisibility);
+                d3.selectAll(".marker").attr("style", axisVisibility);
                 
                 viz1c.dateLine
                     .attr("style", axisVisibility)
@@ -282,6 +284,12 @@
                             .duration(shortenTransitions > 0 ? shortenTransitions : 200)
                             .style("stroke-opacity", 0)
                             .remove();
+                
+                if(clicked && !(viz1c.nestedData.map(d => d[0]).includes(clicked))) {
+                    // if we had clicked on a country, but now we've changed our country selection
+                    // and the clicked country doesn't exist in our selection, reset the clicked state
+                    clicked = null;
+                }
 
                 lines.enter()
                         .append("path")
@@ -289,7 +297,18 @@
                             .attr("stroke-width", 1.5)
                             .attr("fill", "none")
                             .merge(lines)
-                                .attr("stroke", d => continentColors(d[1][0].continent))  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
+                                .attr("stroke", function(d) {
+                                    color = continentColors(d[1][0].continent);
+
+                                    if(clicked) {
+                                        if(d[1][0].countryname == clicked) {
+                                            return color;
+                                        }
+                                        return "#ddd";
+                                    } else {
+                                        return color;
+                                    }
+                                })  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
                                 .attr("id", d => "line-" + d[0].replaceAll(" ", "-"))
                                 .transition()
                                 .duration(shortenTransitions > 0 ? shortenTransitions : 500)
@@ -521,7 +540,6 @@
                               So, we add a g element at the end of the svg (so it's on top of all the other elements in the svg),
                               and fill it with a rectangle shifted to match the visualization <g>.
                 ********/
-                let clicked = null;  // if a user clicks on a country, this will be a string with the country name
 
                 d3.select("svg.viz1c")
                     .append("g")
@@ -536,13 +554,30 @@
                         marker.attr("display", null);
                     }).on("mouseleave", function() {
                         marker.attr("display", "none");
-                        viz1c.svg.selectAll(".viz1c.line")
-                            .attr("stroke", d => continentColors(d[1][0].continent))
-                            .classed("hover-line", false);
+                        
+                        if(!clicked) {
+                            viz1c.svg.selectAll(".viz1c.line")
+                                .attr("stroke", d => continentColors(d[1][0].continent))
+                                .classed("hover-line", false);
+                        }
                     }).on("click", function () {
-                        //
+                        if(clicked) {  // undo the click if we're already clicked
+                            clicked = null; 
+                            return;
+                        }
+                        clicked = viz1c.svg.selectAll(".hover-line");
+                        if(clicked.node()) {  // check that the hover is activated before trying to get its value
+                            clicked = clicked.datum()[0];  // get the country name for the highlighted line
+                            //console.log(clicked);
+                        }
                     }).on("mousemove", function() {
                         event.preventDefault();
+
+                        if(clicked && !(viz1c.nestedData.map(d => d[0]).includes(clicked))) {
+                            // if we had clicked on a country, but now we've changed our country selection
+                            // and the clicked country doesn't exist in our selection, reset the clicked state
+                            clicked = null;
+                        }
 
                         let pointer = d3.pointer(event, this);  // get x,y position of pointer
                         let xm = viz1c.xScale.invert(pointer[0]);  // get date value associated with x position
@@ -565,10 +600,17 @@
                         if(data.length == 0) {return;}
 
                         // get row for country with nearest attribute value on this date
-                        let closestCountryRow = d3.least(data, function(d) {
-                                                                    const value = (isNaN(d[0][viz1c.attributeData]) ? 999999 : d[0][viz1c.attributeData]);
-                                                                    return Math.abs(ym - value);
-                                                                })[0];
+                        // exception: if we're in the "clicked" state, get the selected country's values
+                        let closestCountryRow;
+                        if(!clicked) {
+                            closestCountryRow = d3.least(data, function(d) {
+                                                                        const value = (isNaN(d[0][viz1c.attributeData]) ? 999999 : d[0][viz1c.attributeData]);
+                                                                        return Math.abs(ym - value);
+                                                                    })[0];
+                        } else {
+                            closestCountryRow = d3.filter(data, d => d[0].countryname == clicked)[0][0];
+                        }
+
                         let closestValue = (isNaN(closestCountryRow[viz1c.attributeData]) ? 0 : closestCountryRow[viz1c.attributeData]);
 
                         // for the non-active lines, set them to light gray. For the active/hovered line, leave its stroke as the default blue
@@ -610,6 +652,7 @@
             Promise.all([
                 d3.csv("../data/data_dictionary.csv", dictRowParser),
                 d3.csv("../data/covid_data.csv", dataRowParser),
+                //d3.csv("../data/covid_oxford+owid_20210414-185830.csv", dataRowParser),
             ]).then(function(files) {
                 dataDict = files[0];
                 covidData = files[1];
