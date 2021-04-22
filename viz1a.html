@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:;base64,=">
+    <title>Viz 1a</title>
+    <link rel="stylesheet" href="covid.css">
+    <link rel="stylesheet" href="custom_checkbox.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+
+<style>
+    #map {
+        width: 960px;
+        height: 500px;
+    }
+
+    .info {
+        padding: 6px 8px;
+        font: 14px/16px Arial,
+            Helvetica, sans-serif;
+        background: white;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+    }
+
+    .info h4 {
+        margin: 0 0 5px;
+        color: #777;
+    }
+
+    .legend {
+        text-align: left;
+        line-height: 18px;
+        color: #555;
+    }
+
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+    }
+
+
+    path {
+        /*fill: #000;*/
+        fill-opacity: .8;
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+
+    path:hover {
+        fill: brown;
+        fill-opacity: .7;
+    }
+
+
+</style>
+
+<body>
+    <div class="spinner"></div>
+
+    <!-- Initially put everything off screen til done loading -->
+    <div id="main-container" style="margin-left:-9999px">
+        <label for="viz1-attributes">Attribute: </label>
+            <select name="viz1-attributes" id="viz1-attributes"></select>
+
+        <label class="checkbox-container">Scale max to selected date
+            <input name="viz1-scale-checkbox" type="checkbox">
+            <span class="checkmark"></span>
+        </label>
+
+        <label class="checkbox-container">Quantile color scale
+            <input name="viz1-quantile-checkbox" type="checkbox">
+            <span class="checkmark"></span>
+        </label>
+
+        <br><br>
+
+        <div id="viz1a-date-slider-wrap" style="width:600px">
+            <button class="date-slider play-button">Play</button>
+        </div>
+
+        <div id="map" style="margin-top:10px;"></div>
+
+        <script type="text/javascript" src="viz1a.js"></script>
+    </div>
+</body>
+
+</html>
