@@ -1,4 +1,3 @@
-// TODO: prevent panning out of frame
 // TODO: tooltip/hover
 // TODO: click to select country (and click without ctrl to de-select?)
 // TODO: ctrl+click to select multiple (and click without ctrl to de-select?)
@@ -353,17 +352,25 @@ Promise.all([
     * geojson from https://datahub.io/core/geo-countries
     * converted to topojson (for compression) using https://mapshaper.org/
     **************************/
+    const northeastCorner = L.latLng(84.4, 181)
+    const southwestCorner = L.latLng(-58, -180)
+    const maxBounds = L.latLngBounds(northeastCorner, southwestCorner);
 
     // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
     // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
-    map = new L.Map("map").setView([40.97989807, 7.734375], 2);
+    map = new L.Map("map")
+        .setView([40.97989807, 7.734375], 2)
+        .setMaxBounds(maxBounds);
 
     //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     //    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     //}).addTo(map);
 
+
+
     L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiY2hlb3BvcnlwdCIsImEiOiJja25ybGc4OTcwazVlMnZwaGdjY2lpb2NiIn0.rCIDJbLTQ4QVLTtHwHH6YQ', {
         maxZoom: 18,
+        minZoom: 2,
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
             'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
         id: 'mapbox/light-v9',
