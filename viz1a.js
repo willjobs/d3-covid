@@ -180,6 +180,8 @@ function redrawViz1a() {
     let attributeName = var_metadata.display_name;
     let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
 
+    viz1a.title.text(attributeName + " among countries on " + formatDateLong(theDate));
+
     /******
      * update colors
     ******/
@@ -211,24 +213,30 @@ function redrawViz1a() {
         //}
     }
 
-
-    // color the countries based on the attribute
-    viz1aData.forEach(d => {
-        // if NaN or < 0, replace with 0. Then apply the appropriate scale based on checkbox.
-        let scaledVal;
-
-        if (!isNaN(maxValue)) {
-            let val = (isNaN(d[attributeData]) || isNaN(d[attributeData]) < 0 ? 0 : d[attributeData]);
-            scaledVal = (quantileColor ? viz1a.colorScaleQuantile(val) : viz1a.colorScale(val));
-        } else {
-            scaledVal = "#ccc";
-        }
-        d3.selectAll("path.shape-" + d.iso_code)
-            .transition()
-            .duration(shortenTransitions > 0 ? shortenTransitions : 200)
-            .attr("fill", scaledVal);
-    });
-
+    // bind data to each path
+    d3.selectAll("path[class^='shape-']")
+        .data(viz1aData, function (d) {
+            return d ? d.iso_code : d3.select(this).attr("class").match(/(?<=shape-)[A-Z]{3}/)[0];
+        }).on("mouseover", function () {
+            d3.select(this).classed("hover-country", true);
+        }).on("mousemove", function (event, d) {
+            viz1a.tooltip
+                .style("left", event.pageX < 50 ? 0 : event.pageX - 50 + "px")
+                .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px")
+                .style("display", "inline-block")
+                // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
+                // Also, don't show NaN or "NA". If no data, write "No data"
+                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
+        }).on("mouseout", function () {
+            d3.select(this).classed("hover-country", false);
+            viz1a.tooltip.style("display", "none");
+        }).transition()
+        .duration(shortenTransitions > 0 ? shortenTransitions : 200)
+        .attr("fill", function (d) {
+            // if NaN or < 0, replace with 0. Then apply the appropriate scale based on checkbox.
+            let val = ((isNaN(d[attributeData]) || (d[attributeData] < 0)) ? 0 : d[attributeData]);
+            return (quantileColor ? viz1a.colorScaleQuantile(val) : viz1a.colorScale(val));
+        });
 
     // if we switched from an ordinal variable, get rid of the manually specified ticks
     //viz1a.xAxis.tickValues(null);
@@ -240,6 +248,65 @@ function makeViz1a() {
 
     viz1a.colorScale = d3.scaleSequential(d3.interpolateYlOrBr);
     viz1a.colorScaleQuantile = d3.scaleSequentialQuantile(d3.interpolateYlOrBr);
+
+    viz1a.tooltip = d3.select("body")
+        .append("div")
+        .classed("viz1a tooltip", true)
+        .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
+
+    viz1a.title = d3.select(".viz1a.title span")
+        .style("font-size", FONT_SIZES.title + "px")
+        .style("font-weight", "bold");
+
+    // get unique iso_codes
+    covidISOCodes = Array.from(new Set(covidData.map(d => d.iso_code)));
+    geomISOCodes = geomData.features.map(d => d.properties.ISO_A3);
+
+    commonISOCodes = geomISOCodes.filter(d => covidISOCodes.includes(d));
+    geomMissingISOCodes = geomISOCodes.filter(d => !covidISOCodes.includes(d));
+
+
+    /***************************
+    * Make the map.
+    * geojson from https://datahub.io/core/geo-countries
+    * converted to topojson (for compression) using https://mapshaper.org/
+    **************************/
+    const northeastCorner = L.latLng(84.4, 181)
+    const southwestCorner = L.latLng(-58, -180)
+    const maxBounds = L.latLngBounds(northeastCorner, southwestCorner);
+
+    // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
+    // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
+    map = new L.Map("map")
+        .setView([40.97989807, 7.734375], 2)
+        .setMaxBounds(maxBounds);
+
+    //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    //    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    //}).addTo(map);
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiY2hlb3BvcnlwdCIsImEiOiJja25ybGc4OTcwazVlMnZwaGdjY2lpb2NiIn0.rCIDJbLTQ4QVLTtHwHH6YQ', {
+        maxZoom: 18,
+        minZoom: 2,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        id: 'mapbox/light-v9',
+        tileSize: 512,
+        zoomOffset: -1
+    }).addTo(map);
+
+    // each path will have a classname = their ISO code (e.g., class="USA")
+    // only give countries in our dataset a class of shape-[ISO code], and make other countries' polygons gray
+    function styleLeafletPaths(feature) {
+        return {
+            className: commonISOCodes.includes(feature.properties.ISO_A3) ? "shape-" + feature.properties.ISO_A3 : null,
+            fillColor: commonISOCodes.includes(feature.properties.ISO_A3) ? "blue" : "#eee",
+            fillOpacity: commonISOCodes.includes(feature.properties.ISO_A3) ? 1.0 : 0.1
+        }
+    }
+
+    L.geoJson(geomData, { style: styleLeafletPaths })
+        .addTo(map);
 
     /****************************
     * Set up date slider
@@ -338,62 +405,6 @@ Promise.all([
     geomData = files[2];
 
     console.log("Imported all data!");
-
-    // get unique iso_codes
-    covidISOCodes = Array.from(new Set(covidData.map(d => d.iso_code)));
-    geomISOCodes = geomData.features.map(d => d.properties.ISO_A3);
-
-    commonISOCodes = geomISOCodes.filter(d => covidISOCodes.includes(d));
-    geomMissingISOCodes = geomISOCodes.filter(d => !covidISOCodes.includes(d));
-
-
-    /***************************
-    * Make the map.
-    * geojson from https://datahub.io/core/geo-countries
-    * converted to topojson (for compression) using https://mapshaper.org/
-    **************************/
-    const northeastCorner = L.latLng(84.4, 181)
-    const southwestCorner = L.latLng(-58, -180)
-    const maxBounds = L.latLngBounds(northeastCorner, southwestCorner);
-
-    // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
-    // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
-    map = new L.Map("map")
-        .setView([40.97989807, 7.734375], 2)
-        .setMaxBounds(maxBounds);
-
-    //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    //    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    //}).addTo(map);
-
-
-
-    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiY2hlb3BvcnlwdCIsImEiOiJja25ybGc4OTcwazVlMnZwaGdjY2lpb2NiIn0.rCIDJbLTQ4QVLTtHwHH6YQ', {
-        maxZoom: 18,
-        minZoom: 2,
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-        id: 'mapbox/light-v9',
-        tileSize: 512,
-        zoomOffset: -1
-    }).addTo(map);
-
-
-    // each path will have a classname = their ISO code (e.g., class="USA")
-    function styleLeafletPaths(feature) {
-        return {
-            className: "shape-" + feature.properties.ISO_A3,
-            fillColor: commonISOCodes.includes(feature.properties.ISO_A3) ? "blue" : "#eee",
-            fillOpacity: commonISOCodes.includes(feature.properties.ISO_A3) ? 1.0 : 0.1
-        }
-    }
-
-    L.geoJson(geomData, { style: styleLeafletPaths })
-        .addTo(map);
-
-
-    // set fill to gray for countries not in our covid dataset
-    d3.selectAll("path")
 
 
     /***************************
