@@ -1,6 +1,5 @@
-// TODO: brush select
-// TODO: handle ordinal values differently; don't use an interpolated quantile scale
 // TODO: add legend
+// TODO: handle ordinal values differently; don't use an interpolated quantile scale
 // TODO: sync up CSS animations
 
 
@@ -211,6 +210,22 @@ function redrawViz1a() {
 
         //}
     }
+
+    d3.selectAll(".viz1a.legend").remove();  // if it already exists, remove it and replace it
+    d3.select("#map")
+        .append("div")  // this ensures it doesn't move with the map when we drag it
+        .classed("viz1a legend", true)
+        .style("position", "relative")
+        .style("z-index", 99999)  // this plus the position:relative makes it appear on top
+        .style("pointer-events", "none")  // this ensures we don't block the mouseovers, clicks, etc
+        .append("svg")
+        .attr("height", viz1a.svg.attr("height"))
+        .attr("width", viz1a.svg.attr("width"))
+        .append("g")
+        .attr("transform", "translate(20, " + (viz1a.svg.attr("height") - 150) + ")")
+        .append(() => legend({ color: viz1a.colorScale, title: attribute, width: 200 }));
+    d3.select(".legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
+
 
     // bind data to each path
     d3.selectAll("path[class^='shape-']")
