@@ -1,6 +1,7 @@
 // TODO: brush select
 // TODO: handle ordinal values differently; don't use an interpolated quantile scale
 // TODO: add legend
+// TODO: sync up CSS animations
 
 
 const FONT_SIZES = {
@@ -311,9 +312,44 @@ function makeViz1a() {
 
     // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
     // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
-    map = new L.Map("map")
+    map = new L.Map("map", { selectArea: true })
         .setView([40.97989807, 7.734375], 2)
         .setMaxBounds(maxBounds);
+
+    // from https://github.com/w8r/leaflet-area-select
+    map.selectArea.setShiftKey(true);
+
+    //map.on('areaselected', (e) => {
+    //    console.log(e.bounds.toBBoxString()); // lon, lat, lon, lat
+    //});
+    function createPolygonFromBounds(latLngBounds) {
+        var center = latLngBounds.getCenter()
+        latlngs = [];
+
+        latlngs.push(latLngBounds.getSouthWest());//bottom left
+        latlngs.push({ lat: latLngBounds.getSouth(), lng: center.lng });//bottom center
+        latlngs.push(latLngBounds.getSouthEast());//bottom right
+        latlngs.push({ lat: center.lat, lng: latLngBounds.getEast() });// center right
+        latlngs.push(latLngBounds.getNorthEast());//top right
+        latlngs.push({ lat: latLngBounds.getNorth(), lng: map.getCenter().lng });//top center
+        latlngs.push(latLngBounds.getNorthWest());//top left
+        latlngs.push({ lat: map.getCenter().lat, lng: latLngBounds.getWest() });//center left
+
+        return new L.polygon(latlngs);
+    }
+
+    map.on('areaselected', (evt) => {
+        L.Util.requestAnimFrame(() => {
+            map.eachLayer((pointLayer) => {
+                if (pointLayer instanceof L.Polygon) {
+
+                    pointLayer.setStyle({
+                        fill: (turf.intersect(createPolygonFromBounds(evt.bounds).toGeoJSON(), pointLayer.toGeoJSON()) ? 'red' : 'green')
+                    });
+                }
+            });
+        });
+    });
 
     //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     //    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -342,7 +378,23 @@ function makeViz1a() {
     L.geoJson(geomData, { style: styleLeafletPaths })
         .addTo(map);
 
+    map.boxZoom.disable();
 
+    // Variable to hold the starting xy coordinates
+    // when `mousedown` occured.
+    var start;
+
+    // Variable to hold the current xy coordinates
+    // when `mousemove` or `mouseup` occurs.
+    var current;
+
+    // Variable for the draw box element.
+    var box;
+
+
+    /*******************
+     * Add hover events
+     *******************/
     // these events don't change with data, so we can set them here
     d3.selectAll("path[class^='shape-']")
         .on("mouseover", function () {
@@ -352,8 +404,10 @@ function makeViz1a() {
             viz1a.tooltip.style("display", "none");
         });
 
-    // add a transparent rectangle over top of the whole SVG so we can click anywhere
-    // to remove items from the selection
+    /*******************
+    * add a transparent rectangle over top of the whole SVG so we can click anywhere
+    * to remove items from the selection
+    *******************/
     viz1a.svg = d3.selectAll("#map svg");
     viz1a.svg.select("g")
         .append("rect")

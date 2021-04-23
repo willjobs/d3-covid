@@ -97,6 +97,15 @@
   100%  { opacity:0.4; stroke-width: 3; }
 }
 
+.boxdraw {
+background: rgba(56, 135, 190, 0.1);
+border: 2px solid #3887be;
+position: absolute;
+top: 0;
+left: 0;
+width: 0;
+height: 0;
+}
 
 </style>
 
@@ -127,6 +136,8 @@
         <div class="viz1a title"><span></span></div>
         <div id="map" style="margin-top:10px;"></div>
 
+        <script src='https://unpkg.com/@turf/turf@6.3.0/turf.min.js'></script>
+        <script type="text/javascript" src="Map.SelectArea.js"></script>
         <script type="text/javascript" src="viz1a.js"></script>
     </div>
 </body>
