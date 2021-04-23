@@ -1,9 +1,7 @@
-// TODO: tooltip/hover
-// TODO: click to select country (and click without ctrl to de-select?)
-// TODO: ctrl+click to select multiple (and click without ctrl to de-select?)
+// TODO: brush select
 // TODO: handle ordinal values differently; don't use an interpolated quantile scale
 // TODO: add legend
-// TODO: brush select
+
 
 const FONT_SIZES = {
     tick: 12,
@@ -217,8 +215,6 @@ function redrawViz1a() {
     d3.selectAll("path[class^='shape-']")
         .data(viz1aData, function (d) {
             return d ? d.iso_code : d3.select(this).attr("class").match(/(?<=shape-)[A-Z]{3}/)[0];
-        }).on("mouseover", function () {
-            d3.select(this).classed("hover-country", true);
         }).on("mousemove", function (event, d) {
             viz1a.tooltip
                 .style("left", event.pageX < 50 ? 0 : event.pageX - 50 + "px")
@@ -227,9 +223,47 @@ function redrawViz1a() {
                 // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
                 // Also, don't show NaN or "NA". If no data, write "No data"
                 .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
-        }).on("mouseout", function () {
-            d3.select(this).classed("hover-country", false);
-            viz1a.tooltip.style("display", "none");
+        }).on("click", function (event, d) {
+            let country = d.countryname;
+
+            if (event.ctrlKey) {
+                // add this country to the selection if it's not there. If it is there, remove it.
+                if (!viz1aSelectedCountries.includes(country)) {
+                    viz1aSelectedCountries.push(country);
+                    d3.select(this).classed("selected-country", true);
+                    d3.select(".selected-country")
+                        .classed("selected-country", false)
+                        .classed("selected-country", true);
+                    console.log(["added " + country, viz1aSelectedCountries]);
+                } else {
+                    viz1aSelectedCountries = viz1aSelectedCountries.filter(d => d != country);
+                    d3.select(this).classed("selected-country", false);
+                    console.log(["removed " + country, viz1aSelectedCountries]);
+                }
+            } else {
+                if (viz1aSelectedCountries.length > 0) {
+                    // if the clicked country was already in the list, clear out the entire list
+                    // if the clicked country was not in the list, clear the list and put this country in
+                    const includedCountry = viz1aSelectedCountries.includes(country);
+                    viz1aSelectedCountries = [];
+                    d3.selectAll(".selected-country").classed("selected-country", false);
+                    console.log(["removed all countries", viz1aSelectedCountries]);
+
+                    if (!includedCountry) {
+                        viz1aSelectedCountries.push(country);
+                        d3.select(this).classed("selected-country", true);
+                        console.log(["added " + country, viz1aSelectedCountries]);
+                    }
+                } else {
+                    viz1aSelectedCountries.push(country);
+                    d3.select(this).classed("selected-country", true);
+                    console.log(["added " + country, viz1aSelectedCountries]);
+                }
+            }
+
+            // if ctrl is pressed, add this country to the selection
+            //viz1aSelectedCountries
+            // if ctrl is not pressed, 
         }).transition()
         .duration(shortenTransitions > 0 ? shortenTransitions : 200)
         .attr("fill", function (d) {
@@ -307,6 +341,38 @@ function makeViz1a() {
 
     L.geoJson(geomData, { style: styleLeafletPaths })
         .addTo(map);
+
+
+    // these events don't change with data, so we can set them here
+    d3.selectAll("path[class^='shape-']")
+        .on("mouseover", function () {
+            d3.select(this).classed("hover-country", true);
+        }).on("mouseout", function () {
+            d3.select(this).classed("hover-country", false);
+            viz1a.tooltip.style("display", "none");
+        });
+
+    // add a transparent rectangle over top of the whole SVG so we can click anywhere
+    // to remove items from the selection
+    viz1a.svg = d3.selectAll("#map svg");
+    viz1a.svg.select("g")
+        .append("rect")
+        .classed("click-area", true)
+        .attr("width", viz1a.svg.attr("width"))
+        .attr("height", viz1a.svg.attr("height"))
+        .attr("fill", "blue")
+        .attr("fill-opacity", 0);
+
+    d3.select("rect.click-area")
+        .style("pointer-events", "all")
+        .on("click", function (event) {
+            console.log(["rect", event.target]);
+            if (!event.ctrlKey) {
+                viz1aSelectedCountries = [];
+                d3.selectAll(".selected-country").classed("selected-country", false);
+                console.log(["removed all countries", viz1aSelectedCountries]);
+            }
+        }).lower();
 
     /****************************
     * Set up date slider

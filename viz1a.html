@@ -55,10 +55,47 @@
         stroke-width: 1.5px;
     }
 
-    path:hover {
+    .hover-country {
         fill: brown;
         fill-opacity: .7;
     }
+
+    .selected-country {
+        stroke: #999;
+
+        -webkit-animation: pulsate 1s ease-out;
+        -webkit-animation-iteration-count: infinite;
+        -moz-animation: pulsate 1s ease-out;
+        -moz-animation-iteration-count: infinite;
+        -ms-animation: pulsate 1s ease-out;
+        -ms-animation-iteration-count: infinite;
+        animation: pulsate 1s ease-out;
+        animation-iteration-count: infinite;
+    }
+
+    @-webkit-keyframes pulsate {
+  0%    { opacity:0.6; stroke-width: 0.5; }
+  50%   { opacity:1.0; stroke-width: 1; }
+  100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+@-moz-keyframes pulsate {
+  0%    { opacity:0.6; stroke-width: 0.5; }
+  50%   { opacity:1.0; stroke-width: 1; }
+  100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+@-ms-keyframes pulsate {
+  0%    { opacity:0.6; stroke-width: 0.5; }
+  50%   { opacity:1.0; stroke-width: 1; }
+  100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+@keyframes pulsate {
+  0%    { opacity:0.4; stroke-width: 3; }
+  50%   { opacity:1.0; stroke-width: 5; }
+  100%  { opacity:0.4; stroke-width: 3; }
+}
 
 
 </style>
