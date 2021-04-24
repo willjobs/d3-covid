@@ -1,10 +1,11 @@
-// NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
-// will overwrite any classes that already exist there, which may not be what you want.
+// TODO: label end of lines with country name?
+
 const FONT_SIZES = {
-    tick: 12,
+    tick: 10,
     axisTitle: 14,
     title: 16,
-    markerText: 12
+    markerText: 12,
+    lineLabel: 10
 }
 
 // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
@@ -169,6 +170,7 @@ function redrawViz1c() {
     let varMetadata = dataDict.filter(d => d.variable_name == attribute)[0];
 
     // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
+    // these are defined as object attributes so that we can define the hover effects
     viz1c.attributeName = varMetadata.display_name;
     viz1c.attributeData = varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : attribute;
 
@@ -248,11 +250,20 @@ function redrawViz1c() {
 
     let lines = viz1c.svg.selectAll(".viz1c.line")
         .data(viz1c.nestedData, d => d[0]);  // use the country name in d[0] as the "key" for merging later
+    
+    let labels = viz1c.svg.selectAll(".viz1c.line-label")
+        .data(viz1c.nestedData, d => d[0]);
 
     lines.exit()
         .transition()
         .duration(shortenTransitions > 0 ? shortenTransitions : 200)
         .style("stroke-opacity", 0)
+        .remove();
+
+    labels.exit()
+        .transition()
+        .duration(shortenTransitions > 0 ? shortenTransitions : 200)
+        .style("fill-opacity", 0)
         .remove();
 
     if (clicked && !(viz1c.nestedData.map(d => d[0]).includes(clicked))) {
@@ -283,16 +294,46 @@ function redrawViz1c() {
             .transition()
             .duration(shortenTransitions > 0 ? shortenTransitions : 500)
             .attr("d", d => lineGenerator(d[1]));
+    
+    labels.enter()
+        .append("text")
+            .classed("viz1c line-label", true)
+            .attr("font-size", FONT_SIZES.lineLabel)
+        .merge(labels)
+            .text(d => d[0])    
+            .attr("x", viz1c.dims.innerWidth + 5)
+            .attr("stroke", function (d) {
+                color = continentColors(d[1][0].continent);
+
+                if (clicked) {
+                    if (d[1][0].countryname == clicked) {
+                        return color;
+                    }
+                    return "#ddd";
+                } else {
+                    return color;
+                }
+            })  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
+            .attr("stroke-width", 0.75)
+            .transition()
+            .duration(shortenTransitions > 0 ? shortenTransitions : 500)
+            .style("fill-opacity", 1)
+            .attr("y", function(d) {
+                const lastValue = d[1].slice(-1)[0][viz1c.attributeData];
+                let x = viz1c.yScale((isNaN(lastValue) || (lastValue < 0)) ? 0 : lastValue);
+                console.log([d, d[1], d[1][0], lastValue, x]);
+                return x;
+            });
 }
 
 function makeViz1c() {
     viz1c.redrawFunc = redrawViz1c;  // need this to be able to handle timestep updates
 
-    viz1c.margin = { top: 30, right: 40, bottom: 80, left: 80 };
+    viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
 
     viz1c.dims = {
-        height: 500, width: d3.max([600,  // no smaller than 600px wide
-            d3.min([700, // no larger than 900px wide
+        height: 400, width: d3.max([600,  // no smaller than 800px wide
+            d3.min([800, // no larger than 1000px wide
                 Math.floor(window.innerWidth / 2)])])
     };
     viz1c.dims["innerHeight"] = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom
