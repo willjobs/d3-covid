@@ -1,4 +1,5 @@
 // source: Mike Bostock, https://observablehq.com/@d3/color-legend
+// modification for Vanilla JS instead of Observable based on: https://stackoverflow.com/a/64807612/1102199
 
 function ramp(color, n = 256) {
     var canvas = document.createElement('canvas');
@@ -11,77 +12,6 @@ function ramp(color, n = 256) {
     }
     return canvas;
 }
-
-function entity(character) {
-    return `&#${character.charCodeAt(0).toString()};`;
-}
-
-function swatches({
-    color,
-    columns = null,
-    format = x => x,
-    swatchSize = 15,
-    swatchWidth = swatchSize,
-    swatchHeight = swatchSize,
-    marginLeft = 0
-}) {
-    //const id = DOM.uid().id;
-
-    if (columns !== null) return html`<div style="display: flex; align-items: center; margin-left: ${+marginLeft}px; min-height: 33px; font: 10px sans-serif;">
-  <style>
-
-.swatch-item {
-  break-inside: avoid;
-  display: flex;
-  align-items: center;
-  padding-bottom: 1px;
-}
-
-.swatch-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: calc(100% - ${+swatchWidth}px - 0.5em);
-}
-
-.swatch-swatch {
-  width: ${+swatchWidth}px;
-  height: ${+swatchHeight}px;
-  margin: 0 0.5em 0 0;
-}
-
-  </style>
-  <div style="width: 100%; columns: ${columns};">${color.domain().map(value => {
-        const label = format(value);
-        return html`<div class="swatch-item">
-      <div class="swatch-swatch" style="background:${color(value)};"></div>
-      <div class="swatch-label" title="${label.replace(/["&]/g, entity)}">${document.createTextNode(label)}</div>
-    </div>`;
-    })}
-  </div>
-</div>`;
-
-    return html`<div style="display: flex; align-items: center; min-height: 33px; margin-left: ${+marginLeft}px; font: 10px sans-serif;">
-  <style>
-
-.swatch {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 1em;
-}
-
-.swatch::before {
-  content: "";
-  width: ${+swatchWidth}px;
-  height: ${+swatchHeight}px;
-  margin-right: 0.5em;
-  background: var(--color);
-}
-
-  </style>
-  <div>${color.domain().map(value => html`<span class="swatch" style="--color: ${color(value)}">${document.createTextNode(format(value))}</span>`)}</div>`;
-}
-
 
 function legend({
     color,
@@ -98,6 +28,8 @@ function legend({
     tickValues
 } = {}) {
 
+    let legendType;
+
     const svg = d3.create("svg")
         .attr("width", width)
         .attr("height", height)
@@ -110,6 +42,7 @@ function legend({
 
     // Continuous
     if (color.interpolate) {
+        legendType = "continuous";
         const n = Math.min(color.domain().length, color.range().length);
 
         x = color.copy().rangeRound(d3.quantize(d3.interpolate(marginLeft, width - marginRight), n));
@@ -125,6 +58,7 @@ function legend({
 
     // Sequential
     else if (color.interpolator) {
+        legendType = "sequential";
         x = Object.assign(color.copy()
             .interpolator(d3.interpolateRound(marginLeft, width - marginRight)),
             { range() { return [marginLeft, width - marginRight]; } });
@@ -137,20 +71,22 @@ function legend({
             .attr("preserveAspectRatio", "none")
             .attr("xlink:href", ramp(color.interpolator()).toDataURL());
 
+        // OVERWRITTEN: always use user-specified number of ticks
         // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
-        if (!x.ticks) {
-            if (tickValues === undefined) {
-                const n = Math.round(ticks + 1);
-                tickValues = d3.range(n).map(i => d3.quantile(color.domain(), i / (n - 1)));
-            }
-            if (typeof tickFormat !== "function") {
-                tickFormat = d3.format(tickFormat === undefined ? ",f" : tickFormat);
-            }
+        //if (!x.ticks) {
+        if (tickValues === undefined) {
+            const n = Math.round(ticks + 1);
+            tickValues = d3.range(n).map(i => d3.quantile(color.domain(), i / (n - 1)));
         }
+        if (typeof tickFormat !== "function") {
+            tickFormat = d3.format(tickFormat === undefined ? ",f" : tickFormat);
+        }
+        //}
     }
 
     // Threshold
     else if (color.invertExtent) {
+        legendType = "threshold";
         const thresholds
             = color.thresholds ? color.thresholds() // scaleQuantize
                 : color.quantiles ? color.quantiles() // scaleQuantile
@@ -181,26 +117,33 @@ function legend({
 
     // Ordinal
     else {
+        legendType = "ordinal";
         x = d3.scaleBand()
             .domain(color.domain())
-            .rangeRound([marginLeft, width - marginRight]);
+            .rangeRound([height - marginBottom, marginTop]);
 
         svg.append("g")
             .selectAll("rect")
             .data(color.domain())
             .join("rect")
-            .attr("x", x)
-            .attr("y", marginTop)
+            .attr("x", marginLeft)
+            .attr("y", x)
+            .attr("height", Math.max(0, x.bandwidth() - 1))
             .attr("width", Math.max(0, x.bandwidth() - 1))
-            .attr("height", height - marginTop - marginBottom)
             .attr("fill", color);
 
-        tickAdjust = () => { };
+        //tickAdjust = () => { };
+        //let tickAdjust = g => g.selectAll(".tick line").attr("y1", marginTop + marginBottom - height);
+        tickAdjust = function(g) {
+            g.selectAll(".tick").each(function() {
+                gtick = d3.select(this);
+                gtick.attr("transform", gtick.attr("transform").replace("(0,", "(20,"));
+        })}
     }
 
     svg.append("g")
-        .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(d3.axisBottom(x)
+        .attr("transform", (legendType == "ordinal" ? "translate(0,0)" : `translate(0,${height - marginBottom})`))
+        .call((legendType == "ordinal" ? d3.axisRight(x) : d3.axisBottom(x))
             .ticks(ticks, typeof tickFormat === "string" ? tickFormat : undefined)
             .tickFormat(typeof tickFormat === "function" ? tickFormat : undefined)
             .tickSize(tickSize)
@@ -209,7 +152,7 @@ function legend({
         .call(g => g.select(".domain").remove())
         .call(g => g.append("text")
             .attr("x", marginLeft)
-            .attr("y", marginTop + marginBottom - height - 6)
+            .attr("y", (legendType == "ordinal" ? 10 : marginTop + marginBottom - height - 6))
             .attr("fill", "currentColor")
             .attr("text-anchor", "start")
             .attr("font-weight", "bold")

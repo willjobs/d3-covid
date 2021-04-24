@@ -1,13 +1,14 @@
-// TODO: add legend
-// TODO: handle ordinal values differently; don't use an interpolated quantile scale
-// TODO: sync up CSS animations
-
+// TODO: if quantile, uncheck scale to max checkbox; 
+     //  if scale to max, uncheck quantile
+     //  if ordinal, uncheck and disable both
+// TODO: color scale: high is bad/good
 
 const FONT_SIZES = {
     tick: 12,
     axisTitle: 14,
     title: 16,
-    markerText: 12
+    markerText: 12,
+    legendLabel: 10
 }
 
 var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
@@ -44,100 +45,100 @@ var shortenTransitions = 0;  // this is to allow us to speed up transitions when
 
 function dictRowParser(d) {
     return {
-        variable_name: d.variable_name,  // name of attribute in CSV
-        data_type: d.data_type,  // string, date, numeric, or ordinal
-        display_name: d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
-        sort_order: parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
-        category: d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
-        numeric_column: d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        variable_name :  d.variable_name,  // name of attribute in CSV
+        data_type :      d.data_type,  // string, date, numeric, or ordinal
+        display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
+        sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
+        category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
+        numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
     };
 }
 
 function dataRowParser(d) {
     return {
-        countryname: d.countryname,
-        date: parseDate(d.date),
-        continent: d.continent,
-        new_cases: parseFloat(d.new_cases),
-        new_cases_per_million: parseFloat(d.new_cases_per_million),
-        total_cases: parseFloat(d.total_cases),
-        total_cases_per_million: parseFloat(d.total_cases_per_million),
-        new_deaths: parseFloat(d.new_deaths),
-        new_deaths_per_million: parseFloat(d.new_deaths_per_million),
-        total_deaths: parseFloat(d.total_deaths),
-        total_deaths_per_million: parseFloat(d.total_deaths_per_million),
-        new_tests: parseFloat(d.new_tests),
-        new_tests_per_thousand: parseFloat(d.new_tests_per_thousand),
-        total_tests: parseFloat(d.total_tests),
-        total_tests_per_thousand: parseFloat(d.total_tests_per_thousand),
-        positive_rate: parseFloat(d.positive_rate),
-        reproduction_rate: parseFloat(d.reproduction_rate),
-        new_vaccinations: parseFloat(d.new_vaccinations),
-        new_vaccinations_per_hundred: parseFloat(d.new_vaccinations_per_hundred),
-        people_vaccinated: parseFloat(d.people_vaccinated),
-        people_vaccinated_per_hundred: parseFloat(d.people_vaccinated_per_hundred),
-        people_fully_vaccinated: parseFloat(d.people_fully_vaccinated),
-        people_fully_vaccinated_per_hundred: parseFloat(d.people_fully_vaccinated_per_hundred),
-        icu_patients: parseFloat(d.icu_patients),
-        icu_patients_per_million: parseFloat(d.icu_patients_per_million),
-        hosp_patients: parseFloat(d.hosp_patients),
-        hosp_patients_per_million: parseFloat(d.hosp_patients_per_million),
-        weekly_icu_admissions: parseFloat(d.weekly_icu_admissions),
-        weekly_icu_admissions_per_million: parseFloat(d.weekly_icu_admissions_per_million),
-        weekly_hosp_admissions: parseFloat(d.weekly_hosp_admissions),
-        weekly_hosp_admissions_per_million: parseFloat(d.weekly_hosp_admissions_per_million),
-        stringency_index: parseFloat(d.stringency_index),
-        government_response_index: parseFloat(d.government_response_index),
-        containment_health_index: parseFloat(d.containment_health_index),
-        economic_support_index: parseFloat(d.economic_support_index),
-        c1_school_closing: d.c1_school_closing,
-        c1_school_closing_numeric: parseFloat(d.c1_school_closing_numeric),
-        c2_workplace_closing: d.c2_workplace_closing,
-        c2_workplace_closing_numeric: parseFloat(d.c2_workplace_closing_numeric),
-        c3_cancel_public_events: d.c3_cancel_public_events,
-        c3_cancel_public_events_numeric: parseFloat(d.c3_cancel_public_events_numeric),
-        c4_restrictions_on_gatherings: d.c4_restrictions_on_gatherings,
-        c4_restrictions_on_gatherings_numeric: parseFloat(d.c4_restrictions_on_gatherings_numeric),
-        c5_close_public_transport: d.c5_close_public_transport,
-        c5_close_public_transport_numeric: parseFloat(d.c5_close_public_transport_numeric),
-        c6_stay_at_home_requirements: d.c6_stay_at_home_requirements,
-        c6_stay_at_home_requirements_numeric: parseFloat(d.c6_stay_at_home_requirements_numeric),
-        c7_restrictions_on_internal_movement: d.c7_restrictions_on_internal_movement,
-        c7_restrictions_on_internal_movement_numeric: parseFloat(d.c7_restrictions_on_internal_movement_numeric),
-        c8_international_travel_controls: d.c8_international_travel_controls,
-        c8_international_travel_controls_numeric: parseFloat(d.c8_international_travel_controls_numeric),
-        e1_income_support: d.e1_income_support,
-        e1_income_support_numeric: parseFloat(d.e1_income_support_numeric),
-        e2_debt_contract_relief: d.e2_debt_contract_relief,
-        e2_debt_contract_relief_numeric: parseFloat(d.e2_debt_contract_relief_numeric),
-        e3_fiscal_measures: parseFloat(d.e3_fiscal_measures),
-        e4_international_support: parseFloat(d.e4_international_support),
-        h1_public_information_campaigns: d.h1_public_information_campaigns,
-        h1_public_information_campaigns_numeric: parseFloat(d.h1_public_information_campaigns_numeric),
-        h2_testing_policy: d.h2_testing_policy,
-        h2_testing_policy_numeric: parseFloat(d.h2_testing_policy_numeric),
-        h3_contact_tracing: d.h3_contact_tracing,
-        h3_contact_tracing_numeric: parseFloat(d.h3_contact_tracing_numeric),
-        h6_facial_coverings: d.h6_facial_coverings,
-        h6_facial_coverings_numeric: parseFloat(d.h6_facial_coverings_numeric),
-        h7_vaccination_policy: d.h7_vaccination_policy,
-        h7_vaccination_policy_numeric: parseFloat(d.h7_vaccination_policy_numeric),
-        h4_emergency_investment_in_healthcare: parseFloat(d.h4_emergency_investment_in_healthcare),
-        h5_investment_in_vaccines: parseFloat(d.h5_investment_in_vaccines),
-        population: parseFloat(d.population),
-        population_density: parseFloat(d.population_density),
-        median_age: parseFloat(d.median_age),
-        aged_65_older: parseFloat(d.aged_65_older),
-        aged_70_older: parseFloat(d.aged_70_older),
-        gdp_per_capita: parseFloat(d.gdp_per_capita),
-        extreme_poverty: parseFloat(d.extreme_poverty),
-        cardiovasc_death_rate: parseFloat(d.cardiovasc_death_rate),
-        diabetes_prevalence: parseFloat(d.diabetes_prevalence),
-        female_smokers: parseFloat(d.female_smokers),
-        male_smokers: parseFloat(d.male_smokers),
-        life_expectancy: parseFloat(d.life_expectancy),
-        human_development_index: parseFloat(d.human_development_index),
-        iso_code: d.iso_code
+        countryname :                                  d.countryname,
+        date :                                         parseDate(d.date),
+        continent :                                    d.continent,
+        new_cases :                                    parseFloat(d.new_cases),
+        new_cases_per_million :                        parseFloat(d.new_cases_per_million),
+        total_cases :                                  parseFloat(d.total_cases),
+        total_cases_per_million :                      parseFloat(d.total_cases_per_million),
+        new_deaths :                                   parseFloat(d.new_deaths),
+        new_deaths_per_million :                       parseFloat(d.new_deaths_per_million),
+        total_deaths :                                 parseFloat(d.total_deaths),
+        total_deaths_per_million :                     parseFloat(d.total_deaths_per_million),
+        new_tests :                                    parseFloat(d.new_tests),
+        new_tests_per_thousand :                       parseFloat(d.new_tests_per_thousand),
+        total_tests :                                  parseFloat(d.total_tests),
+        total_tests_per_thousand :                     parseFloat(d.total_tests_per_thousand),
+        positive_rate :                                parseFloat(d.positive_rate),
+        reproduction_rate :                            parseFloat(d.reproduction_rate),
+        new_vaccinations :                             parseFloat(d.new_vaccinations),
+        new_vaccinations_per_hundred :                 parseFloat(d.new_vaccinations_per_hundred),
+        people_vaccinated :                            parseFloat(d.people_vaccinated),
+        people_vaccinated_per_hundred :                parseFloat(d.people_vaccinated_per_hundred),
+        people_fully_vaccinated :                      parseFloat(d.people_fully_vaccinated),
+        people_fully_vaccinated_per_hundred :          parseFloat(d.people_fully_vaccinated_per_hundred),
+        icu_patients :                                 parseFloat(d.icu_patients),
+        icu_patients_per_million :                     parseFloat(d.icu_patients_per_million),
+        hosp_patients :                                parseFloat(d.hosp_patients),
+        hosp_patients_per_million :                    parseFloat(d.hosp_patients_per_million),
+        weekly_icu_admissions :                        parseFloat(d.weekly_icu_admissions),
+        weekly_icu_admissions_per_million :            parseFloat(d.weekly_icu_admissions_per_million),
+        weekly_hosp_admissions :                       parseFloat(d.weekly_hosp_admissions),
+        weekly_hosp_admissions_per_million :           parseFloat(d.weekly_hosp_admissions_per_million),
+        stringency_index :                             parseFloat(d.stringency_index),
+        government_response_index :                    parseFloat(d.government_response_index),
+        containment_health_index :                     parseFloat(d.containment_health_index),
+        economic_support_index :                       parseFloat(d.economic_support_index),
+        c1_school_closing :                            d.c1_school_closing,
+        c1_school_closing_numeric :                    parseFloat(d.c1_school_closing_numeric),
+        c2_workplace_closing :                         d.c2_workplace_closing,
+        c2_workplace_closing_numeric :                 parseFloat(d.c2_workplace_closing_numeric),
+        c3_cancel_public_events :                      d.c3_cancel_public_events,
+        c3_cancel_public_events_numeric :              parseFloat(d.c3_cancel_public_events_numeric),
+        c4_restrictions_on_gatherings :                d.c4_restrictions_on_gatherings,
+        c4_restrictions_on_gatherings_numeric :        parseFloat(d.c4_restrictions_on_gatherings_numeric),
+        c5_close_public_transport :                    d.c5_close_public_transport,
+        c5_close_public_transport_numeric :            parseFloat(d.c5_close_public_transport_numeric),
+        c6_stay_at_home_requirements :                 d.c6_stay_at_home_requirements,
+        c6_stay_at_home_requirements_numeric :         parseFloat(d.c6_stay_at_home_requirements_numeric),
+        c7_restrictions_on_internal_movement :         d.c7_restrictions_on_internal_movement,
+        c7_restrictions_on_internal_movement_numeric : parseFloat(d.c7_restrictions_on_internal_movement_numeric),
+        c8_international_travel_controls :             d.c8_international_travel_controls,
+        c8_international_travel_controls_numeric :     parseFloat(d.c8_international_travel_controls_numeric),
+        e1_income_support :                            d.e1_income_support,
+        e1_income_support_numeric :                    parseFloat(d.e1_income_support_numeric),
+        e2_debt_contract_relief :                      d.e2_debt_contract_relief,
+        e2_debt_contract_relief_numeric :              parseFloat(d.e2_debt_contract_relief_numeric),
+        e3_fiscal_measures :                           parseFloat(d.e3_fiscal_measures),
+        e4_international_support :                     parseFloat(d.e4_international_support),
+        h1_public_information_campaigns :              d.h1_public_information_campaigns,
+        h1_public_information_campaigns_numeric :      parseFloat(d.h1_public_information_campaigns_numeric),
+        h2_testing_policy :                            d.h2_testing_policy,
+        h2_testing_policy_numeric :                    parseFloat(d.h2_testing_policy_numeric),
+        h3_contact_tracing :                           d.h3_contact_tracing,
+        h3_contact_tracing_numeric :                   parseFloat(d.h3_contact_tracing_numeric),
+        h6_facial_coverings :                          d.h6_facial_coverings,
+        h6_facial_coverings_numeric :                  parseFloat(d.h6_facial_coverings_numeric),
+        h7_vaccination_policy :                        d.h7_vaccination_policy,
+        h7_vaccination_policy_numeric :                parseFloat(d.h7_vaccination_policy_numeric),
+        h4_emergency_investment_in_healthcare :        parseFloat(d.h4_emergency_investment_in_healthcare),
+        h5_investment_in_vaccines :                    parseFloat(d.h5_investment_in_vaccines),
+        population :                                   parseFloat(d.population),
+        population_density :                           parseFloat(d.population_density),
+        median_age :                                   parseFloat(d.median_age),
+        aged_65_older :                                parseFloat(d.aged_65_older),
+        aged_70_older :                                parseFloat(d.aged_70_older),
+        gdp_per_capita :                               parseFloat(d.gdp_per_capita),
+        extreme_poverty :                              parseFloat(d.extreme_poverty),
+        cardiovasc_death_rate :                        parseFloat(d.cardiovasc_death_rate),
+        diabetes_prevalence :                          parseFloat(d.diabetes_prevalence),
+        female_smokers :                               parseFloat(d.female_smokers),
+        male_smokers :                                 parseFloat(d.male_smokers),
+        life_expectancy :                              parseFloat(d.life_expectancy),
+        human_development_index :                      parseFloat(d.human_development_index),
+        iso_code :                                     d.iso_code
     };
 }
 
@@ -176,55 +177,66 @@ function redrawViz1a() {
 
     // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
     let attributeName = var_metadata.display_name;
-    let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
 
     viz1a.title.text(attributeName + " among countries on " + formatDateLong(theDate));
 
     /******
-     * update colors
+     * update legend and colors in map
     ******/
-    // if scaling to just today, use the filtered data in viz1aData, otherwise use all data in covidData
-    let maxValue;  // this is used for the non-quantile scale
+    let colorScale;  // this is used to decide which color scale to use for the legend
+    let ordinalValues = [];
 
-    if (scaleMaxToDate) {
-        // we only use one of these, but okay to update both
-        maxValue = d3.max(viz1aData, d => d[attributeData]);
-        viz1a.colorScale.domain([0, maxValue]);
-        viz1a.colorScaleQuantile.domain(viz1aData.map(d => d[attributeData]));
+    if (var_metadata.data_type == "ordinal") {
+        // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
+        ordinalValues = Array.from(new Set(covidData.map(d => (d[attribute] == "NA" ? "0" : d[attribute]) ))).sort();
+        viz1a.colorScaleOrdinal = d3.scaleOrdinal(d3.schemeYlOrBr[ordinalValues.length])  // note: the max # of colors for this color scale is 9
+                                    .domain(ordinalValues);
+        colorScale = viz1a.colorScaleOrdinal;
+    } else if (quantileColor) {
+        viz1a.colorScaleQuantile.domain(viz1aData.map(d => (d[attribute] < 0 ? 0 : d[attribute])));
+        colorScale = viz1a.colorScaleQuantile;
     } else {
-        if (var_metadata.category == "aggregate indices") {
+        let maxValue;
+
+        if ((!scaleMaxToDate) && (var_metadata.category == "aggregate indices")) {
             maxValue = 100.0;
         } else {
-            maxValue = d3.max(covidData, d => d[attributeData]);
+            // if scaling to just today, use the filtered data in viz1aData, otherwise use all data in covidData
+            maxValue = d3.max((scaleMaxToDate ? viz1aData : covidData), d => d[attribute]);
         }
 
         viz1a.colorScale.domain([0, maxValue]);
-        viz1a.colorScaleQuantile.domain(covidData.map(d => d[attributeData]));
-
-        //if (var_metadata.data_type == "ordinal") {
-        // set tick values to exactly these values
-        // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
-        // viz1a.xScale.domain([0, maxValue]);
-        // viz1a.xAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
-
-
-        //}
+        colorScale = viz1a.colorScale;
     }
+
+    const legendHeight = var_metadata.data_type == "ordinal" ? (25 * ordinalValues.length) : 50;
 
     d3.selectAll(".viz1a.legend").remove();  // if it already exists, remove it and replace it
     d3.select("#map")
         .append("div")  // this ensures it doesn't move with the map when we drag it
-        .classed("viz1a legend", true)
+            .classed("viz1a legend", true)
+            .style("position", "relative")
+            .style("z-index", 99999)  // this plus the position:relative makes it appear on top
+            .style("pointer-events", "none")  // this ensures we don't block the mouseovers, clicks, etc
+        .append(() => legend({
+            color: colorScale,
+            title: attributeName,
+            width: var_metadata.data_type == "ordinal" ? 25 : 200,
+            height: legendHeight,
+            ticks: 4,
+            tickFormat: ".0f"
+        }));
+
+    const legendTop = viz1a.svg.attr("height") - 150 - (var_metadata.data_type != "ordinal" ? 0 : ordinalValues.length * d3.select(".legend rect").attr("height"));
+
+    d3.select(".legend svg")
         .style("position", "relative")
-        .style("z-index", 99999)  // this plus the position:relative makes it appear on top
-        .style("pointer-events", "none")  // this ensures we don't block the mouseovers, clicks, etc
-        .append("svg")
-        .attr("height", viz1a.svg.attr("height"))
-        .attr("width", viz1a.svg.attr("width"))
-        .append("g")
-        .attr("transform", "translate(20, " + (viz1a.svg.attr("height") - 150) + ")")
-        .append(() => legend({ color: viz1a.colorScale, title: attribute, width: 200 }));
+            .style("top", legendTop)
+            .style("left", 20);
+
+    d3.selectAll(".tick text").style("font-size", FONT_SIZES.legendLabel + "px");
     d3.select(".legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
+    
 
 
     // bind data to each path
@@ -236,7 +248,6 @@ function redrawViz1a() {
                 .style("left", event.pageX < 50 ? 0 : event.pageX - 50 + "px")
                 .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px")
                 .style("display", "inline-block")
-                // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
                 // Also, don't show NaN or "NA". If no data, write "No data"
                 .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
         }).on("click", function (event, d) {
@@ -283,14 +294,15 @@ function redrawViz1a() {
         }).transition()
         .duration(shortenTransitions > 0 ? shortenTransitions : 200)
         .attr("fill", function (d) {
-            // if NaN or < 0, replace with 0. Then apply the appropriate scale based on checkbox.
-            let val = ((isNaN(d[attributeData]) || (d[attributeData] < 0)) ? 0 : d[attributeData]);
-            return (quantileColor ? viz1a.colorScaleQuantile(val) : viz1a.colorScale(val));
-        });
+            let val;
 
-    // if we switched from an ordinal variable, get rid of the manually specified ticks
-    //viz1a.xAxis.tickValues(null);
-    //viz1a.xAxisTicks.ticks(5);
+            if(var_metadata.data_type == "ordinal") {
+                val = d[attribute] == "NA" ? "0" : d[attribute];
+            } else {
+                val = ((isNaN(d[attribute]) || (d[attribute] < 0)) ? 0 : d[attribute]);
+            }
+            return colorScale(val);
+        });
 }
 
 function makeViz1a() {
@@ -301,8 +313,8 @@ function makeViz1a() {
 
     viz1a.tooltip = d3.select("body")
         .append("div")
-        .classed("viz1a tooltip", true)
-        .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
+            .classed("viz1a tooltip", true)
+            .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
 
     viz1a.title = d3.select(".viz1a.title span")
         .style("font-size", FONT_SIZES.title + "px")
@@ -380,16 +392,15 @@ function makeViz1a() {
     viz1a.svg = d3.selectAll("#map svg");
     viz1a.svg.select("g")
         .append("rect")
-        .classed("click-area", true)
-        .attr("width", viz1a.svg.attr("width"))
-        .attr("height", viz1a.svg.attr("height"))
-        .attr("fill", "blue")
-        .attr("fill-opacity", 0);
+            .classed("click-area", true)
+            .attr("width", viz1a.svg.attr("width"))
+            .attr("height", viz1a.svg.attr("height"))
+            .attr("fill", "blue")
+            .attr("fill-opacity", 0);
 
     d3.select("rect.click-area")
         .style("pointer-events", "all")
         .on("click", function (event) {
-            console.log(["rect", event.target]);
             if (!event.ctrlKey) {
                 viz1aSelectedCountries = [];
                 d3.selectAll(".selected-country").classed("selected-country", false);
@@ -414,13 +425,13 @@ function makeViz1a() {
 
     viz1a.svgSlider = d3.select("#viz1a-date-slider-wrap")
         .append("svg")
-        .attr("width", viz1a.dateSliderWidth + 100)
-        .attr("height", "100")
-        .style("vertical-align", "top")
-        .attr("transform", "translate(0, -15)")
+            .attr("width", viz1a.dateSliderWidth + 100)
+            .attr("height", "100")
+            .style("vertical-align", "top")
+            .attr("transform", "translate(0, -15)")
         .append("g")
-        .attr("class", "slider")
-        .attr("transform", "translate(50,50)");
+            .attr("class", "slider")
+            .attr("transform", "translate(50,50)");
 
     viz1a.svgSlider.append("line")
         .attr("class", "date-slider track")
@@ -449,10 +460,10 @@ function makeViz1a() {
         .data(viz1a.dateXScale.ticks(10))
         .enter()
         .append("text")
-        .attr("x", viz1a.dateXScale)
-        .attr("y", 10)
-        .attr("text-anchor", "middle")
-        .text(function (d) { return formatMonthYear(d); });
+            .attr("x", viz1a.dateXScale)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .text(function (d) { return formatMonthYear(d); });
 
     viz1a.dateHandle = viz1a.svgSlider.insert("circle", ".date-slider.track-overlay")
         .attr("class", "date-slider handle")
@@ -520,8 +531,8 @@ Promise.all([
         .forEach(function (attrRow, i) {
             d3.select("optgroup[label='" + attrRow.category + "']")
                 .append("option")
-                .attr("value", attrRow.variable_name)
-                .text(attrRow.display_name);
+                    .attr("value", attrRow.variable_name)
+                    .text(attrRow.display_name);
 
             // initialize attribute to first row in data dictionary
             if (i == 0) { attribute = attrRow.variable_name; }
@@ -564,7 +575,6 @@ Promise.all([
     * Create the viz!
     **************************/
     makeViz1a();
-    redrawViz1a();
     d3.selectAll(".spinner").remove();
     d3.select("#main-container").attr("style", null);
 });
