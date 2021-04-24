@@ -291,11 +291,14 @@ function redrawViz1c() {
     if ((varMetadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
         let maxValue = d3.max(covidData, d => d[viz1c.attributeData]);
+        let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
         // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
         viz1c.yScale.domain([0, maxValue]);
-        viz1c.yAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
+        viz1c.yAxis
+            .tickValues(d3.range(0, maxValue + 0.5, 0.5))
+            .tickFormat(d => ordinalValues[Math.floor(d * 2)]);
     } else {
         // If we're showing an aggregate index like "stringency index", always show 0 to 100.
         // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
@@ -311,7 +314,7 @@ function redrawViz1c() {
         viz1c.yScale.domain([0, maxValue]);
 
         // if we switched from an ordinal variable, get rid of the manually specified ticks
-        viz1c.yAxis.tickValues(null);
+        viz1c.yAxis.tickValues(null).tickFormat(null);
         viz1c.yAxisTicks.ticks(5);
     }
 
@@ -610,7 +613,7 @@ function makeViz1c() {
 
             let pointer = d3.pointer(event, this);  // get x,y position of pointer
             let xm = viz1c.xScale.invert(pointer[0]);  // get date value associated with x position
-            let ym = viz1c.yScale.invert(pointer[1]); // get attribute value associated with y position
+            let ym = viz1c.yScale.invert(pointer[1] < 0 ? 0 : pointer[1]); // get attribute value associated with y position
 
             // if outside the plot area, exit
             if (xm < d3.min(viz1c.dates)) { return; }
@@ -641,7 +644,7 @@ function makeViz1c() {
             }
 
             let closestValue = ((isNaN(closestCountryRow[viz1c.attributeData]) || (closestCountryRow[viz1c.attributeData] < 0)) ? 0 : closestCountryRow[viz1c.attributeData]);
-            let closestValueText = (isNaN(closestCountryRow[viz1c.attributeData]) ? "No data" : closestCountryRow[viz1.selectedAttribute]);  // note: we're showing the ordinal values "1-Local", etc.
+            let closestValueText = (isNaN(closestCountryRow[viz1c.attributeData]) ? "No data" : Math.round(1000 * closestCountryRow[viz1.selectedAttribute])) / 1000;  // rounding to nearest 3 digits; also note: we're showing the ordinal values "1-Local", etc.
 
             // for the non-active lines, set them to light gray. For the active/hovered line, leave its stroke as the default blue
             viz1c.svg.selectAll(".viz1c.line")
