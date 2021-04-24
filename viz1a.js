@@ -1,8 +1,3 @@
-// TODO: color scale: high is bad/good
-// TODO: if quantile, uncheck scale to max checkbox; 
-     //  if scale to max, uncheck quantile
-     //  if ordinal, uncheck and disable both
-
 const FONT_SIZES = {
     tick: 12,
     axisTitle: 14,
@@ -180,6 +175,20 @@ function redrawViz1a() {
     let attributeName = var_metadata.display_name;
 
     viz1a.title.text(attributeName + " among countries on " + formatDateLong(theDate));
+
+    if(var_metadata.data_type == "ordinal") {
+        // uncheck and disable both checkboxes for ordinal variables
+
+        quantileColor = false;
+        d3.select("input[name='viz1-quantile-checkbox']").property("checked", false);
+
+        scaleMaxToDate = false;
+        d3.select("input[name='viz1-scale-checkbox']").property("checked", false);
+
+        d3.selectAll(".checkbox-container").style("display","none")
+    } else {
+        d3.selectAll(".checkbox-container").style("display","inline-block")
+    }
 
     /******
      * update legend and colors in map
@@ -560,6 +569,13 @@ Promise.all([
 
     checkbox.on("click", function () {
         scaleMaxToDate = d3.select(this).property("checked");
+        
+        // can't do scale to today's max and quantile at the same time
+        if(quantileColor) {
+            quantileColor = false;
+            d3.select("input[name='viz1-quantile-checkbox']").property("checked", false);
+        }
+
         redrawViz1a();
     })
 
@@ -571,6 +587,13 @@ Promise.all([
 
     checkbox.on("click", function () {
         quantileColor = d3.select(this).property("checked");
+
+        // can't do scale to today's max and quantile at the same time
+        if(scaleMaxToDate) {
+            scaleMaxToDate = false;
+            d3.select("input[name='viz1-scale-checkbox']").property("checked", false);
+        }
+
         redrawViz1a();
     })
 
