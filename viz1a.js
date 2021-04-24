@@ -249,12 +249,12 @@ function redrawViz1All() {
 
 function redrawViz1a() {
     const viz1aData = covidData.filter(d => d.date.getTime() == viz1.selectedDate.getTime());
-    const var_metadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
+    const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
 
-    let attributeName = var_metadata.display_name;
+    let attributeName = varMetadata.display_name;
     viz1a.title.text(attributeName + " among countries on " + formatDateLong(viz1.selectedDate));
 
-    if(var_metadata.data_type == "ordinal") {
+    if(varMetadata.data_type == "ordinal") {
         // uncheck and disable both checkboxes for ordinal variables
         viz1.quantileColor = false;
         d3.select("input[name='viz1-quantile-checkbox']").property("checked", false);
@@ -274,15 +274,15 @@ function redrawViz1a() {
     let colorPalette;
     let ordinalValues = [];
 
-    if(var_metadata.larger_is == "good") {
-        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemeYlGn : d3.interpolateYlGn);
-    } else if(var_metadata.larger_is == "bad") {
-        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemeYlOrBr : d3.interpolateYlOrBr);
+    if(varMetadata.larger_is == "good") {
+        colorPalette = (varMetadata.data_type == "ordinal" ? d3.schemeYlGn : d3.interpolateYlGn);
+    } else if(varMetadata.larger_is == "bad") {
+        colorPalette = (varMetadata.data_type == "ordinal" ? d3.schemeYlOrBr : d3.interpolateYlOrBr);
     } else {  // neutral
-        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemePurples : d3.interpolatePurples);
+        colorPalette = (varMetadata.data_type == "ordinal" ? d3.schemePurples : d3.interpolatePurples);
     }
 
-    if (var_metadata.data_type == "ordinal") {
+    if (varMetadata.data_type == "ordinal") {
         // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
         ordinalValues = Array.from(new Set(covidData.map(d => (d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute]) ))).sort();
         colorScale = d3.scaleOrdinal(colorPalette[ordinalValues.length]).domain(ordinalValues);  // note: the max # of colors for this color scale is 9
@@ -292,7 +292,7 @@ function redrawViz1a() {
     } else {
         let maxValue;
 
-        if ((!viz1.scaleMaxToDate) && (var_metadata.category == "aggregate indices")) {
+        if ((!viz1.scaleMaxToDate) && (varMetadata.category == "aggregate indices")) {
             maxValue = 100.0;
         } else {
             // if scaling to just today, use the filtered data in viz1aData, otherwise use all data in covidData
@@ -303,7 +303,7 @@ function redrawViz1a() {
         colorScale = d3.scaleSequential(colorPalette).domain([0, maxValue]);
     }
 
-    const legendHeight = var_metadata.data_type == "ordinal" ? (25 * ordinalValues.length) : 50;
+    const legendHeight = varMetadata.data_type == "ordinal" ? (25 * ordinalValues.length) : 50;
 
     d3.selectAll(".viz1a.legend").remove();  // if it already exists, remove it and replace it
     d3.select("#map")
@@ -315,13 +315,13 @@ function redrawViz1a() {
         .append(() => legend({
             color: colorScale,
             title: attributeName,
-            width: var_metadata.data_type == "ordinal" ? 25 : 200,
+            width: varMetadata.data_type == "ordinal" ? 25 : 200,
             height: legendHeight,
             ticks: 4,
             tickFormat: ".0f"
         }));
 
-    const legendTop = viz1a.svg.attr("height") - 150 - (var_metadata.data_type != "ordinal" ? 
+    const legendTop = viz1a.svg.attr("height") - 150 - (varMetadata.data_type != "ordinal" ? 
                                                             0 : 
                                                             ordinalValues.length * d3.select(".legend rect").attr("height"));
 
@@ -389,7 +389,7 @@ function redrawViz1a() {
         .attr("fill", function (d) {
             let val;
 
-            if(var_metadata.data_type == "ordinal") {
+            if(varMetadata.data_type == "ordinal") {
                 val = d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute];
             } else {
                 val = ((isNaN(d[viz1.selectedAttribute]) || (d[viz1.selectedAttribute] < 0)) ? 0 : d[viz1.selectedAttribute]);
