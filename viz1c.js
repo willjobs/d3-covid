@@ -1,5 +1,3 @@
-// TODO: label end of lines with country name?
-
 const FONT_SIZES = {
     tick: 10,
     axisTitle: 14,
@@ -320,9 +318,7 @@ function redrawViz1c() {
             .style("fill-opacity", 1)
             .attr("y", function(d) {
                 const lastValue = d[1].slice(-1)[0][viz1c.attributeData];
-                let x = viz1c.yScale((isNaN(lastValue) || (lastValue < 0)) ? 0 : lastValue);
-                console.log([d, d[1], d[1][0], lastValue, x]);
-                return x;
+                return viz1c.yScale((isNaN(lastValue) || (lastValue < 0)) ? 0 : lastValue);
             });
 }
 
@@ -584,7 +580,6 @@ function makeViz1c() {
             clicked = viz1c.svg.selectAll(".hover-line");
             if (clicked.node()) {  // check that the hover is activated before trying to get its value
                 clicked = clicked.datum()[0];  // get the country name for the highlighted line
-                //console.log(clicked);
             }
         }).on("mousemove", function (event) {
             event.preventDefault();

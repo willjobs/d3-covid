@@ -95,3 +95,72 @@ body {
     stroke-opacity: 0.5;
     stroke-width: 1.25px;
 }
+
+#map {
+    width: 960px;
+    height: 500px;
+}
+
+#map .info {
+    padding: 6px 8px;
+    font: 14px/16px Arial,
+        Helvetica, sans-serif;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.info h4 {
+    margin: 0 0 5px;
+    color: #777;
+}
+
+#map path {
+    /*fill: #000;*/
+    fill-opacity: .8;
+    stroke: #fff;
+    stroke-width: 1.5px;
+}
+
+.hover-country {
+    fill: brown;
+    fill-opacity: .7;
+}
+
+.selected-country {
+    stroke: #999;
+
+    -webkit-animation: pulsate 1s ease-out;
+    -webkit-animation-iteration-count: infinite;
+    -moz-animation: pulsate 1s ease-out;
+    -moz-animation-iteration-count: infinite;
+    -ms-animation: pulsate 1s ease-out;
+    -ms-animation-iteration-count: infinite;
+    animation: pulsate 1s ease-out;
+    animation-iteration-count: infinite;
+}
+
+@-webkit-keyframes pulsate {
+    0%    { opacity:0.6; stroke-width: 0.5; }
+    50%   { opacity:1.0; stroke-width: 1; }
+    100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+    @-moz-keyframes pulsate {
+    0%    { opacity:0.6; stroke-width: 0.5; }
+    50%   { opacity:1.0; stroke-width: 1; }
+    100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+    @-ms-keyframes pulsate {
+    0%    { opacity:0.6; stroke-width: 0.5; }
+    50%   { opacity:1.0; stroke-width: 1; }
+    100%  { opacity:0.6; stroke-width: 0.5; }
+}
+
+    @keyframes pulsate {
+    0%    { opacity:0.4; stroke-width: 3; }
+    50%   { opacity:1.0; stroke-width: 5; }
+    100%  { opacity:0.4; stroke-width: 3; }
+}
