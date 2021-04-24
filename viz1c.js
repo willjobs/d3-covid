@@ -1,8 +1,9 @@
 const FONT_SIZES = {
-    tick: 10,
+    tick: 12,
     axisTitle: 14,
     title: 16,
     markerText: 12,
+    legendLabel: 10,
     lineLabel: 10
 }
 
@@ -10,7 +11,6 @@ const FONT_SIZES = {
 const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
     .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
 
-var viz1c = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1c
 
 var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
 var formatDateLong = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
@@ -26,12 +26,20 @@ var formatMonthYear = function (d) {
 
 var covidData;
 var dataDict;
-var viz1cSelectedCountries = [];
-var attribute;
-var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
-var clicked = null;  // if a user clicks on a country, this will be a string with the country name
 
-var theDate;
+// these properties apply to all 3 of the viz1 visualizations
+var viz1 = {
+    selectedCountries: [],
+    scaleMaxToDate: false,  // if false, set scales' maxes to the max over whole timeframe; if true, set max to just values observed on selected date
+    quantileColor: false,    // if true, use scaleSequentialQuantile for colors; if false, use scaleSequential
+    shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
+}
+
+// these are specific to viz1c
+var viz1c = {
+    clicked: null  // if a user clicks on a country, this will be a string with the country name
+};  
+
 
 function dictRowParser(d) {
     return {
@@ -40,7 +48,8 @@ function dictRowParser(d) {
         display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
         sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
         category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
-        numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        numeric_column : d.numeric_column,  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        larger_is :      d.larger_is  // determines whether a large value is "good", "bad", or "neutral", which determines the color scale on the map
     };
 }
 
@@ -132,18 +141,101 @@ function dataRowParser(d) {
     };
 }
 
-// function used to handle updating dates from a date slider
 
+function makeDateSlider(viz, cssLocation) {
+    /****************************
+    * Set up date slider
+    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
+    ***************************/
+    viz.dateSliderValue = 0;
+    viz.dateSliderWidth = 400;
+
+    let minDate = d3.min(covidData, d => d.date);
+    let maxDate = d3.max(covidData, d => d.date);
+
+    viz.dateXScale = d3.scaleTime()
+        .domain([minDate, maxDate])
+        .range([0, viz.dateSliderWidth])
+        .clamp(true);  // prevent dot from going off scale
+
+    viz.svgSlider = d3.select("#viz1-date-slider-wrap")
+        .append("svg")
+            .attr("width", viz.dateSliderWidth + 100)
+            .attr("height", "100")
+            .style("vertical-align", "top")
+            .attr("transform", "translate(0, -15)")
+        .append("g")
+            .attr("class", "slider")
+            .attr("transform", "translate(50,50)");
+
+    viz.svgSlider.append("line")
+        .attr("class", "date-slider track")
+        .attr("x1", viz.dateXScale.range()[0])
+        .attr("x2", viz.dateXScale.range()[1])
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-inset")
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-overlay")
+        .call(d3.drag()
+            .on("start.interrupt", function () { viz.svgSlider.interrupt(); })
+            .on("start drag", function (event, d) {
+                viz.shortenTransitions = 100;  // shorten all transition durations to 100ms
+                viz.dateSliderValue = event.x;
+                dateUpdate(viz);
+            })
+            .on("end", function () {
+                viz.shortenTransitions = 0;  // go back to normal transitions
+            })
+        );
+
+    viz.svgSlider.insert("g", ".date-slider.track-overlay")
+        .attr("class", "date-slider date-ticks")
+        .attr("transform", "translate(0," + 18 + ")")
+        .selectAll("text")
+        .data(viz.dateXScale.ticks(10))
+        .enter()
+        .append("text")
+            .attr("x", viz.dateXScale)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .text(function (d) { return formatMonthYear(d); });
+
+    viz.dateHandle = viz.svgSlider.insert("circle", ".date-slider.track-overlay")
+        .attr("class", "date-slider handle")
+        .attr("r", 9);
+
+    viz.dateLabel = viz.svgSlider.append("text")
+        .attr("class", "label")
+        .attr("text-anchor", "middle")
+        .text(formatDateLong(minDate))
+        .attr("transform", "translate(0," + (-25) + ")");
+
+
+    viz.playButton = d3.select(cssLocation + " .play-button");
+    viz.playButton
+        .on("click", function () {
+            let button = d3.select(this);
+            if (button.text() == "Pause") {
+                clearInterval(viz.dateTimer);
+                button.text("Play");
+            } else {
+                viz.dateTimer = setInterval(dateStep, 400, viz);
+                button.text("Pause");
+            }
+        });
+}
+
+// function used to handle updating dates from a date slider
 function dateUpdate(viz, setDate = null) {
-    newDate = setDate == null ? viz.dateyScale.invert(viz.dateSliderValue) : setDate;
+    const newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
 
     // update position and text of label according to slider scale
-    viz.dateHandle.attr("cx", viz.dateyScale(newDate));
+    viz.dateHandle.attr("cx", viz.dateXScale(newDate));
     viz.dateLabel
-        .attr("x", viz.dateyScale(newDate))
+        .attr("x", viz.dateXScale(newDate))
         .text(formatDateLong(newDate));
 
-    theDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
+    viz.selectedDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
     viz.redrawFunc();
 }
 
@@ -161,29 +253,32 @@ function dateStep(viz) {
     }
 }
 
+function redrawViz1All() {
+    redrawViz1c();
+}
+
 function redrawViz1c() {
     // get all data for selected countries
-    let viz1cData = covidData.filter(d => viz1cSelectedCountries.includes(d.countryname));
-
-    let varMetadata = dataDict.filter(d => d.variable_name == attribute)[0];
+    const viz1cData = covidData.filter(d => viz1.selectedCountries.includes(d.countryname));
+    const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
 
     // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
-    // these are defined as object attributes so that we can define the hover effects
+    // these are defined as object attributes so that we can define the hover effects in makeViz1c
     viz1c.attributeName = varMetadata.display_name;
-    viz1c.attributeData = varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : attribute;
+    viz1c.attributeData = varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : viz1.selectedAttribute;
 
     // in case we removed all the data, don't show any axes or gridlines
     let axisVisibility = (viz1cData.length == 0 ? "none" : "inherit");
-    d3.selectAll(".x").style("display", axisVisibility);
-    d3.selectAll(".y").style("display", axisVisibility);
-    d3.selectAll(".grid").style("display", axisVisibility);
+    d3.selectAll(".viz1c .x").style("display", axisVisibility);
+    d3.selectAll(".viz1c .y").style("display", axisVisibility);
+    d3.selectAll(".viz1c .grid").style("display", axisVisibility);
 
     viz1c.dateLine
         .style("display", axisVisibility)
         .transition()
-        .duration(shortenTransitions > 0 ? 0 : 200)  // move the line immediately if dragging the time slider
-        .attr("x1", viz1c.xScale(theDate))
-        .attr("x2", viz1c.xScale(theDate));
+        .duration(viz1.shortenTransitions > 0 ? 0 : 200)  // move the line immediately if dragging the time slider
+        .attr("x1", viz1c.xScale(viz1.selectedDate))
+        .attr("x2", viz1c.xScale(viz1.selectedDate));
 
     viz1c.title.text(viz1c.attributeName + " over time");
 
@@ -209,7 +304,7 @@ function redrawViz1c() {
         if (varMetadata.category == 'aggregate indices') {
             maxValue = 100.0;
         } else {
-            maxValue = d3.max(covidData.filter(d => viz1cSelectedCountries.includes(d.countryname)),
+            maxValue = d3.max(covidData.filter(d => viz1.selectedCountries.includes(d.countryname)),
                 d => d[viz1c.attributeData]);
         }
 
@@ -223,7 +318,7 @@ function redrawViz1c() {
     // Update y-axis (x-axis is constant)
     d3.select(".viz1c.y.axis")
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 300)
         .call(viz1c.yAxis);
 
     // add the Y gridlines (x-axis is constant)
@@ -254,20 +349,20 @@ function redrawViz1c() {
 
     lines.exit()
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 200)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 200)
         .style("stroke-opacity", 0)
         .remove();
 
     labels.exit()
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 200)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 200)
         .style("fill-opacity", 0)
         .remove();
 
-    if (clicked && !(viz1c.nestedData.map(d => d[0]).includes(clicked))) {
+    if (viz1c.clicked && !(viz1c.nestedData.map(d => d[0]).includes(viz1c.clicked))) {
         // if we had clicked on a country, but now we've changed our country selection
         // and the clicked country doesn't exist in our selection, reset the clicked state
-        clicked = null;
+        viz1c.clicked = null;
     }
 
     lines.enter()
@@ -279,8 +374,8 @@ function redrawViz1c() {
             .attr("stroke", function (d) {
                 color = continentColors(d[1][0].continent);
 
-                if (clicked) {
-                    if (d[1][0].countryname == clicked) {
+                if (viz1c.clicked) {
+                    if (d[1][0].countryname == viz1c.clicked) {
                         return color;
                     }
                     return "#ddd";
@@ -290,9 +385,9 @@ function redrawViz1c() {
             })  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
             .attr("id", d => "line-" + d[0].replaceAll(" ", "-"))
             .transition()
-            .duration(shortenTransitions > 0 ? shortenTransitions : 500)
+            .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
             .attr("d", d => lineGenerator(d[1]));
-    
+
     labels.enter()
         .append("text")
             .classed("viz1c line-label", true)
@@ -303,8 +398,8 @@ function redrawViz1c() {
             .attr("stroke", function (d) {
                 color = continentColors(d[1][0].continent);
 
-                if (clicked) {
-                    if (d[1][0].countryname == clicked) {
+                if (viz1c.clicked) {
+                    if (d[1][0].countryname == viz1c.clicked) {
                         return color;
                     }
                     return "#ddd";
@@ -314,7 +409,7 @@ function redrawViz1c() {
             })  // d[1] is array of all rows for a country; d[1][0] is the first row of data in that array; we get the continent just from the first row
             .attr("stroke-width", 0.75)
             .transition()
-            .duration(shortenTransitions > 0 ? shortenTransitions : 500)
+            .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
             .style("fill-opacity", 1)
             .attr("y", function(d) {
                 const lastValue = d[1].slice(-1)[0][viz1c.attributeData];
@@ -323,7 +418,7 @@ function redrawViz1c() {
 }
 
 function makeViz1c() {
-    viz1c.redrawFunc = redrawViz1c;  // need this to be able to handle timestep updates
+    viz1.redrawFunc = redrawViz1All;  // need this to be able to handle timestep updates
 
     viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
 
@@ -387,8 +482,8 @@ function makeViz1c() {
         .call(viz1c.xAxisGrid);  // X-axis gridlines shouldn't change
 
     /***************
-        * y-axis gridlines
-        * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+    * y-axis gridlines
+    * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
     ***************/
     viz1c.yAxisTicks = d3.axisLeft(viz1c.yScale)
         .tickSize(-viz1c.dims.innerWidth)
@@ -416,85 +511,8 @@ function makeViz1c() {
     ).sort()
         .map(d => parseDate(d));
 
-    /****************************
-    * Set up date slider and vertical line indicating the date
-    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
-    ***************************/
-    viz1c.dateSliderValue = 0;
-    viz1c.dateSliderWidth = 400;
-
-    viz1c.dateyScale = d3.scaleTime()
-        .domain([minDate, maxDate])
-        .range([0, viz1c.dateSliderWidth])
-        .clamp(true);  // prevent dot from going off scale
-
-    viz1c.svgSlider = d3.select("#viz1c-date-slider-wrap")
-        .append("svg")
-            .attr("width", viz1c.dateSliderWidth + 100)
-            .attr("height", "100")
-            .style("vertical-align", "top")
-            .attr("transform", "translate(0, -15)")
-        .append("g")
-            .attr("class", "slider")
-            .attr("transform", "translate(50,50)");
-
-    viz1c.svgSlider.append("line")
-        .attr("class", "date-slider track")
-        .attr("x1", viz1c.dateyScale.range()[0])
-        .attr("x2", viz1c.dateyScale.range()[1])
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-inset")
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-overlay")
-        .call(d3.drag()
-            .on("start.interrupt", function () { viz1c.svgSlider.interrupt(); })
-            .on("start drag", function (event, d) {
-                shortenTransitions = 100;  // shorten all transition durations to 100ms
-                viz1c.dateSliderValue = event.x;
-                dateUpdate(viz1c);
-            })
-            .on("end", function () {
-                shortenTransitions = 0;  // go back to normal transitions
-            })
-        );
-
-    viz1c.svgSlider.insert("g", ".date-slider.track-overlay")
-        .attr("class", "date-slider date-ticks")
-        .attr("transform", "translate(0," + 18 + ")")
-        .selectAll("text")
-        .data(viz1c.dateyScale.ticks(10))
-        .enter()
-        .append("text")
-            .attr("x", viz1c.dateyScale)
-            .attr("y", 10)
-            .attr("text-anchor", "middle")
-            .text(function (d) { return formatMonthYear(d); });
-
-    viz1c.dateHandle = viz1c.svgSlider.insert("circle", ".date-slider.track-overlay")
-        .attr("class", "date-slider handle")
-        .attr("r", 9);
-
-    viz1c.dateLabel = viz1c.svgSlider.append("text")
-        .attr("class", "label")
-        .attr("text-anchor", "middle")
-        .text(formatDateLong(minDate))
-        .attr("transform", "translate(0," + (-25) + ")");
-
-
-    viz1c.playButton = d3.select("#viz1c-date-slider-wrap .play-button");
-    viz1c.playButton
-        .on("click", function () {
-            let button = d3.select(this);
-            if (button.text() == "Pause") {
-                clearInterval(viz1c.dateTimer);
-                button.text("Play");
-            } else {
-                viz1c.dateTimer = setInterval(dateStep, 400, viz1c);
-                button.text("Pause");
-            }
-        });
-
-    theDate = maxDate;
+    makeDateSlider(viz1, "#viz1-date-slider-wrap");
+    viz1.selectedDate = d3.max(covidData, d => d.date);
 
     viz1c.dateLine = viz1c.svg.append("line")
         .classed("viz1c date-line", true)
@@ -502,13 +520,13 @@ function makeViz1c() {
         .attr("stroke-width", 2)
         .attr("stroke-dasharray", "3 3")
         .attr("fill", "none")
-        .attr("x1", viz1c.xScale(theDate))
-        .attr("x2", viz1c.xScale(theDate))
+        .attr("x1", viz1c.xScale(viz1.selectedDate))
+        .attr("x2", viz1c.xScale(viz1.selectedDate))
         .attr("y1", 0)
         .attr("y2", viz1c.dims.innerHeight)
         .lower();  // put the date line below the data
 
-    dateUpdate(viz1c, maxDate);
+    dateUpdate(viz1, viz1.selectedDate);
 
     /**********
     * Add hover effects from https://observablehq.com/@d3/multi-line-chart
@@ -561,33 +579,33 @@ function makeViz1c() {
             .attr('fill', 'none')
             .attr('pointer-events', 'all')
         .on("mouseenter", function () {
-            if (d3.selectAll(".x").style("display") != "none") { // i.e., data is being shown
+            if (d3.selectAll(".viz1c .x").style("display") != "none") { // i.e., data is being shown
                 marker.style("display", "inherit");
             }
         }).on("mouseleave", function () {
             marker.style("display", "none");
 
-            if (!clicked) {
+            if (!viz1c.clicked) {
                 viz1c.svg.selectAll(".viz1c.line")
                     .attr("stroke", d => continentColors(d[1][0].continent))
                     .classed("hover-line", false);
             }
         }).on("click", function () {
-            if (clicked) {  // undo the click if we're already clicked
-                clicked = null;
+            if (viz1c.clicked) {  // undo the click if we're already clicked
+                viz1c.clicked = null;
                 return;
             }
-            clicked = viz1c.svg.selectAll(".hover-line");
-            if (clicked.node()) {  // check that the hover is activated before trying to get its value
-                clicked = clicked.datum()[0];  // get the country name for the highlighted line
+            viz1c.clicked = viz1c.svg.selectAll(".hover-line");
+            if (viz1c.clicked.node()) {  // check that the hover is activated before trying to get its value
+                viz1c.clicked = viz1c.clicked.datum()[0];  // get the country name for the highlighted line
             }
         }).on("mousemove", function (event) {
             event.preventDefault();
 
-            if (clicked && !(viz1c.nestedData.map(d => d[0]).includes(clicked))) {
+            if (viz1c.clicked && !(viz1c.nestedData.map(d => d[0]).includes(viz1c.clicked))) {
                 // if we had clicked on a country, but now we've changed our country selection
                 // and the clicked country doesn't exist in our selection, reset the clicked state
-                clicked = null;
+                viz1c.clicked = null;
             }
 
             let pointer = d3.pointer(event, this);  // get x,y position of pointer
@@ -613,17 +631,17 @@ function makeViz1c() {
             // get row for country with nearest attribute value on this date
             // exception: if we're in the "clicked" state, get the selected country's values
             let closestCountryRow;
-            if (!clicked) {
+            if (!viz1c.clicked) {
                 closestCountryRow = d3.least(data, function (d) {
                     const value = (isNaN(d[0][viz1c.attributeData]) ? 999999 : d[0][viz1c.attributeData]);
                     return Math.abs(ym - value);
                 })[0];
             } else {
-                closestCountryRow = d3.filter(data, d => d[0].countryname == clicked)[0][0];
+                closestCountryRow = d3.filter(data, d => d[0].countryname == viz1c.clicked)[0][0];
             }
 
             let closestValue = ((isNaN(closestCountryRow[viz1c.attributeData]) || (closestCountryRow[viz1c.attributeData] < 0)) ? 0 : closestCountryRow[viz1c.attributeData]);
-            let closestValueText = (isNaN(closestCountryRow[viz1c.attributeData]) ? "No data" : closestCountryRow[viz1c.attributeData]);
+            let closestValueText = (isNaN(closestCountryRow[viz1c.attributeData]) ? "No data" : closestCountryRow[viz1.selectedAttribute]);  // note: we're showing the ordinal values "1-Local", etc.
 
             // for the non-active lines, set them to light gray. For the active/hovered line, leave its stroke as the default blue
             viz1c.svg.selectAll(".viz1c.line")
@@ -638,18 +656,18 @@ function makeViz1c() {
             let markerTextAlign = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? "end" : "start");
             let markerX = (pointer[0] > viz1c.xScale.range()[1] * 0.75 ? -5 : 5);
 
-            d3.selectAll(".marker-text")
+            d3.selectAll(".viz1c .marker-text")
                 .attr("text-anchor", markerTextAlign)
                 .attr("x", markerX);
 
             // since there are two textboxes with different y positions, we need to update one at a time
             // we also want to make sure that country is on top
             if (viz1c.yScale(closestValue) < viz1c.yScale.range()[0] * 0.1) {
-                d3.selectAll(".marker-text.country").attr("y", 8);
-                d3.selectAll(".marker-text.attribute").attr("y", 20);
+                d3.selectAll(".viz1c .marker-text.country").attr("y", 8);
+                d3.selectAll(".viz1c .marker-text.attribute").attr("y", 20);
             } else {
-                d3.selectAll(".marker-text.country").attr("y", -20);
-                d3.selectAll(".marker-text.attribute").attr("y", -8);
+                d3.selectAll(".viz1c .marker-text.country").attr("y", -20);
+                d3.selectAll(".viz1c .marker-text.attribute").attr("y", -8);
             }
 
             // move the marker to the appropriate location on the line
@@ -695,9 +713,9 @@ Promise.all([
                 .each(function () { countries.push(this.value) }); // for each select country, get its value (name)
 
             // want to maintain ordering of original selection
-            viz1cSelectedCountries = viz1cSelectedCountries.filter(d => countries.includes(d));
-            added = countries.filter(d => !viz1cSelectedCountries.includes(d));
-            viz1cSelectedCountries = viz1cSelectedCountries.concat(added);
+            viz1.selectedCountries = viz1.selectedCountries.filter(d => countries.includes(d));
+            added = countries.filter(d => !viz1.selectedCountries.includes(d));
+            viz1.selectedCountries = viz1.selectedCountries.concat(added);
 
             redrawViz1c();
         });
@@ -725,19 +743,19 @@ Promise.all([
             display_name: d.display_name
         }))
         .forEach(function (attrRow, i) {
-            d3.select("optgroup[label='" + attrRow.category + "']")
+            d3.select("select#viz1-attributes optgroup[label='" + attrRow.category + "']")
                 .append("option")
                     .attr("value", attrRow.variable_name)
                     .text(attrRow.display_name);
 
             // initialize attribute to first row in data dictionary
-            if (i == 0) { attribute = attrRow.variable_name; }
+            if (i == 0) { viz1.selectedAttribute = attrRow.variable_name; }
         });
 
     // create listener
     selectAttr
         .on("change", function () {
-            attribute = d3.select(this)
+            viz1.selectedAttribute = d3.select(this)
                 .select("option:checked")
                 .attr("value");  // want value (variable_name), not the text (display_name)
             redrawViz1c();
