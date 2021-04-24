@@ -1,5 +1,6 @@
 // source: Mike Bostock, https://observablehq.com/@d3/color-legend
 // modification for Vanilla JS instead of Observable based on: https://stackoverflow.com/a/64807612/1102199
+// Additionally modified by Will Jobs to make ordinal legends displayed vertically
 
 function ramp(color, n = 256) {
     var canvas = document.createElement('canvas');
