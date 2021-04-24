@@ -1,7 +1,7 @@
+// TODO: color scale: high is bad/good
 // TODO: if quantile, uncheck scale to max checkbox; 
      //  if scale to max, uncheck quantile
      //  if ordinal, uncheck and disable both
-// TODO: color scale: high is bad/good
 
 const FONT_SIZES = {
     tick: 12,
@@ -50,7 +50,8 @@ function dictRowParser(d) {
         display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
         sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
         category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
-        numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        numeric_column : d.numeric_column,  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        larger_is :      d.larger_is  // determines whether a large value is "good", "bad", or "neutral", which determines the color scale on the map
     };
 }
 
@@ -184,17 +185,24 @@ function redrawViz1a() {
      * update legend and colors in map
     ******/
     let colorScale;  // this is used to decide which color scale to use for the legend
+    let colorPalette;
     let ordinalValues = [];
+
+    if(var_metadata.larger_is == "good") {
+        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemeYlGn : d3.interpolateYlGn);
+    } else if(var_metadata.larger_is == "bad") {
+        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemeYlOrBr : d3.interpolateYlOrBr);
+    } else {  // neutral
+        colorPalette = (var_metadata.data_type == "ordinal" ? d3.schemePurples : d3.interpolatePurples);
+    }
 
     if (var_metadata.data_type == "ordinal") {
         // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
         ordinalValues = Array.from(new Set(covidData.map(d => (d[attribute] == "NA" ? "0" : d[attribute]) ))).sort();
-        viz1a.colorScaleOrdinal = d3.scaleOrdinal(d3.schemeYlOrBr[ordinalValues.length])  // note: the max # of colors for this color scale is 9
-                                    .domain(ordinalValues);
-        colorScale = viz1a.colorScaleOrdinal;
+        colorScale = d3.scaleOrdinal(colorPalette[ordinalValues.length]).domain(ordinalValues);  // note: the max # of colors for this color scale is 9
     } else if (quantileColor) {
-        viz1a.colorScaleQuantile.domain(viz1aData.map(d => (d[attribute] < 0 ? 0 : d[attribute])));
-        colorScale = viz1a.colorScaleQuantile;
+        colorScale = d3.scaleSequentialQuantile(colorPalette)
+                        .domain(viz1aData.map(d => (d[attribute] < 0 ? 0 : d[attribute])));
     } else {
         let maxValue;
 
@@ -205,8 +213,7 @@ function redrawViz1a() {
             maxValue = d3.max((scaleMaxToDate ? viz1aData : covidData), d => d[attribute]);
         }
 
-        viz1a.colorScale.domain([0, maxValue]);
-        colorScale = viz1a.colorScale;
+        colorScale = d3.scaleSequential(colorPalette).domain([0, maxValue]);
     }
 
     const legendHeight = var_metadata.data_type == "ordinal" ? (25 * ordinalValues.length) : 50;
@@ -307,9 +314,6 @@ function redrawViz1a() {
 
 function makeViz1a() {
     viz1a.redrawFunc = redrawViz1a;  // need this to be able to handle timestep updates
-
-    viz1a.colorScale = d3.scaleSequential(d3.interpolateYlOrBr);
-    viz1a.colorScaleQuantile = d3.scaleSequentialQuantile(d3.interpolateYlOrBr);
 
     viz1a.tooltip = d3.select("body")
         .append("div")
