@@ -6,8 +6,6 @@ const FONT_SIZES = {
     legendLabel: 10
 }
 
-var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
-
 var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
 var formatDateLong = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
 var formatDate_yyyymmdd = d3.timeFormat("%Y-%m-%d");
@@ -23,19 +21,15 @@ var formatMonthYear = function (d) {
 var covidData;
 var dataDict;
 
-var viz1aSelectedCountries = [];
-var attribute;
-var theDate;
-var map;
+// these properties apply to all 3 of the viz1 visualizations
+var viz1 = {
+    selectedCountries: [],
+    scaleMaxToDate: false,  // if false, set scales' maxes to the max over whole timeframe; if true, set max to just values observed on selected date
+    quantileColor: false,    // if true, use scaleSequentialQuantile for colors; if false, use scaleSequential
+    shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
+}
 
-// if false, set scales' maxes to the max over whole timeframe; 
-// if true, set max to just values observed on selected date
-var scaleMaxToDate;
-
-// if true, use scaleSequentialQuantile for colors; if false, use scaleSequential
-var quantileColor;
-
-var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
+var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
 
 
 function dictRowParser(d) {
@@ -138,10 +132,92 @@ function dataRowParser(d) {
     };
 }
 
-// function used to handle updating dates from a date slider
+function makeDateSlider(viz, cssLocation) {
+    /****************************
+    * Set up date slider
+    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
+    ***************************/
+    viz.dateSliderValue = 0;
+    viz.dateSliderWidth = 400;
 
+    let minDate = d3.min(covidData, d => d.date);
+    let maxDate = d3.max(covidData, d => d.date);
+
+    viz.dateXScale = d3.scaleTime()
+        .domain([minDate, maxDate])
+        .range([0, viz.dateSliderWidth])
+        .clamp(true);  // prevent dot from going off scale
+
+    viz.svgSlider = d3.select("#viz1-date-slider-wrap")
+        .append("svg")
+            .attr("width", viz.dateSliderWidth + 100)
+            .attr("height", "100")
+            .style("vertical-align", "top")
+            .attr("transform", "translate(0, -15)")
+        .append("g")
+            .attr("class", "slider")
+            .attr("transform", "translate(50,50)");
+
+    viz.svgSlider.append("line")
+        .attr("class", "date-slider track")
+        .attr("x1", viz.dateXScale.range()[0])
+        .attr("x2", viz.dateXScale.range()[1])
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-inset")
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-overlay")
+        .call(d3.drag()
+            .on("start.interrupt", function () { viz.svgSlider.interrupt(); })
+            .on("start drag", function (event, d) {
+                viz.shortenTransitions = 100;  // shorten all transition durations to 100ms
+                viz.dateSliderValue = event.x;
+                dateUpdate(viz);
+            })
+            .on("end", function () {
+                viz.shortenTransitions = 0;  // go back to normal transitions
+            })
+        );
+
+    viz.svgSlider.insert("g", ".date-slider.track-overlay")
+        .attr("class", "date-slider date-ticks")
+        .attr("transform", "translate(0," + 18 + ")")
+        .selectAll("text")
+        .data(viz.dateXScale.ticks(10))
+        .enter()
+        .append("text")
+            .attr("x", viz.dateXScale)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .text(function (d) { return formatMonthYear(d); });
+
+    viz.dateHandle = viz.svgSlider.insert("circle", ".date-slider.track-overlay")
+        .attr("class", "date-slider handle")
+        .attr("r", 9);
+
+    viz.dateLabel = viz.svgSlider.append("text")
+        .attr("class", "label")
+        .attr("text-anchor", "middle")
+        .text(formatDateLong(minDate))
+        .attr("transform", "translate(0," + (-25) + ")");
+
+
+    viz.playButton = d3.select(cssLocation + " .play-button");
+    viz.playButton
+        .on("click", function () {
+            let button = d3.select(this);
+            if (button.text() == "Pause") {
+                clearInterval(viz.dateTimer);
+                button.text("Play");
+            } else {
+                viz.dateTimer = setInterval(dateStep, 400, viz);
+                button.text("Pause");
+            }
+        });
+}
+
+// function used to handle updating dates from a date slider
 function dateUpdate(viz, setDate = null) {
-    newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
+    const newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
 
     // update position and text of label according to slider scale
     viz.dateHandle.attr("cx", viz.dateXScale(newDate));
@@ -149,7 +225,7 @@ function dateUpdate(viz, setDate = null) {
         .attr("x", viz.dateXScale(newDate))
         .text(formatDateLong(newDate));
 
-    theDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
+    viz.selectedDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
     viz.redrawFunc();
 }
 
@@ -167,27 +243,28 @@ function dateStep(viz) {
     }
 }
 
+function redrawViz1All() {
+    redrawViz1a();
+}
+
 function redrawViz1a() {
-    let viz1aData = covidData.filter(d => d.date.getTime() == theDate.getTime());
-    let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
+    const viz1aData = covidData.filter(d => d.date.getTime() == viz1.selectedDate.getTime());
+    const var_metadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
 
-    // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
     let attributeName = var_metadata.display_name;
-
-    viz1a.title.text(attributeName + " among countries on " + formatDateLong(theDate));
+    viz1a.title.text(attributeName + " among countries on " + formatDateLong(viz1.selectedDate));
 
     if(var_metadata.data_type == "ordinal") {
         // uncheck and disable both checkboxes for ordinal variables
-
-        quantileColor = false;
+        viz1.quantileColor = false;
         d3.select("input[name='viz1-quantile-checkbox']").property("checked", false);
 
-        scaleMaxToDate = false;
+        viz1.scaleMaxToDate = false;
         d3.select("input[name='viz1-scale-checkbox']").property("checked", false);
 
-        d3.selectAll(".checkbox-container").style("display","none")
+        d3.selectAll(".viz1.checkbox-container").style("display","none")
     } else {
-        d3.selectAll(".checkbox-container").style("display","inline-block")
+        d3.selectAll(".viz1.checkbox-container").style("display","inline-block")
     }
 
     /******
@@ -207,19 +284,20 @@ function redrawViz1a() {
 
     if (var_metadata.data_type == "ordinal") {
         // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
-        ordinalValues = Array.from(new Set(covidData.map(d => (d[attribute] == "NA" ? "0" : d[attribute]) ))).sort();
+        ordinalValues = Array.from(new Set(covidData.map(d => (d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute]) ))).sort();
         colorScale = d3.scaleOrdinal(colorPalette[ordinalValues.length]).domain(ordinalValues);  // note: the max # of colors for this color scale is 9
-    } else if (quantileColor) {
+    } else if (viz1.quantileColor) {
         colorScale = d3.scaleSequentialQuantile(colorPalette)
-                        .domain(viz1aData.map(d => (d[attribute] < 0 ? 0 : d[attribute])));
+                        .domain(viz1aData.map(d => (d[viz1.selectedAttribute] < 0 ? 0 : d[viz1.selectedAttribute])));
     } else {
         let maxValue;
 
-        if ((!scaleMaxToDate) && (var_metadata.category == "aggregate indices")) {
+        if ((!viz1.scaleMaxToDate) && (var_metadata.category == "aggregate indices")) {
             maxValue = 100.0;
         } else {
             // if scaling to just today, use the filtered data in viz1aData, otherwise use all data in covidData
-            maxValue = d3.max((scaleMaxToDate ? viz1aData : covidData), d => d[attribute]);
+            maxValue = d3.max((viz1.scaleMaxToDate ? viz1aData : covidData), d => d[viz1.selectedAttribute]);
+            maxValue = isNaN(maxValue) ? 0 : maxValue;
         }
 
         colorScale = d3.scaleSequential(colorPalette).domain([0, maxValue]);
@@ -243,20 +321,22 @@ function redrawViz1a() {
             tickFormat: ".0f"
         }));
 
-    const legendTop = viz1a.svg.attr("height") - 150 - (var_metadata.data_type != "ordinal" ? 0 : ordinalValues.length * d3.select(".legend rect").attr("height"));
+    const legendTop = viz1a.svg.attr("height") - 150 - (var_metadata.data_type != "ordinal" ? 
+                                                            0 : 
+                                                            ordinalValues.length * d3.select(".legend rect").attr("height"));
 
-    d3.select(".legend svg")
+    d3.select("#map .legend svg")
         .style("position", "relative")
             .style("top", legendTop)
             .style("left", 20);
 
-    d3.selectAll(".tick text").style("font-size", FONT_SIZES.legendLabel + "px");
-    d3.select(".legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
+    d3.selectAll("#map .tick text").style("font-size", FONT_SIZES.legendLabel + "px");
+    d3.select("#map .legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
     
 
 
     // bind data to each path
-    d3.selectAll("path[class^='shape-']")
+    d3.selectAll("#map path[class^='shape-']")
         .data(viz1aData, function (d) {
             return d ? d.iso_code : d3.select(this).attr("class").match(/(?<=shape-)[A-Z]{3}/)[0];
         }).on("mousemove", function (event, d) {
@@ -265,64 +345,61 @@ function redrawViz1a() {
                 .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px")
                 .style("display", "inline-block")
                 // Also, don't show NaN or "NA". If no data, write "No data"
-                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
+                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[viz1.selectedAttribute] == "number" && isNaN(d[viz1.selectedAttribute])) || d[viz1.selectedAttribute] == "NA") ? "No data" : d[viz1.selectedAttribute]));
         }).on("click", function (event, d) {
             let country = d.countryname;
 
             if (event.ctrlKey) {
                 // add this country to the selection if it's not there. If it is there, remove it.
-                if (!viz1aSelectedCountries.includes(country)) {
-                    viz1aSelectedCountries.push(country);
+                if (!viz1.selectedCountries.includes(country)) {
+                    viz1.selectedCountries.push(country);
                     d3.select(this).classed("selected-country", true);
-                    d3.select(".selected-country")
+                    d3.select("#map .selected-country")
                         .classed("selected-country", false)
                         .classed("selected-country", true);
-                    console.log(["added " + country, viz1aSelectedCountries]);
+                    console.log(["added " + country, viz1.selectedCountries]);
                 } else {
-                    viz1aSelectedCountries = viz1aSelectedCountries.filter(d => d != country);
+                    viz1.selectedCountries = viz1.selectedCountries.filter(d => d != country);
                     d3.select(this).classed("selected-country", false);
-                    console.log(["removed " + country, viz1aSelectedCountries]);
+                    console.log(["removed " + country, viz1.selectedCountries]);
                 }
             } else {
-                if (viz1aSelectedCountries.length > 0) {
+                if (viz1.selectedCountries.length > 0) {
                     // if the clicked country was already in the list, clear out the entire list
                     // if the clicked country was not in the list, clear the list and put this country in
-                    const includedCountry = viz1aSelectedCountries.includes(country);
-                    viz1aSelectedCountries = [];
-                    d3.selectAll(".selected-country").classed("selected-country", false);
-                    console.log(["removed all countries", viz1aSelectedCountries]);
+                    const includedCountry = viz1.selectedCountries.includes(country);
+                    viz1.selectedCountries = [];
+                    d3.selectAll("#map .selected-country").classed("selected-country", false);
+                    console.log(["removed all countries", viz1.selectedCountries]);
 
                     if (!includedCountry) {
-                        viz1aSelectedCountries.push(country);
+                        viz1.selectedCountries.push(country);
                         d3.select(this).classed("selected-country", true);
-                        console.log(["added " + country, viz1aSelectedCountries]);
+                        console.log(["added " + country, viz1.selectedCountries]);
                     }
                 } else {
-                    viz1aSelectedCountries.push(country);
+                    viz1.selectedCountries.push(country);
                     d3.select(this).classed("selected-country", true);
-                    console.log(["added " + country, viz1aSelectedCountries]);
+                    console.log(["added " + country, viz1.selectedCountries]);
                 }
             }
 
-            // if ctrl is pressed, add this country to the selection
-            //viz1aSelectedCountries
-            // if ctrl is not pressed, 
         }).transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 200)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 200)
         .attr("fill", function (d) {
             let val;
 
             if(var_metadata.data_type == "ordinal") {
-                val = d[attribute] == "NA" ? "0" : d[attribute];
+                val = d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute];
             } else {
-                val = ((isNaN(d[attribute]) || (d[attribute] < 0)) ? 0 : d[attribute]);
+                val = ((isNaN(d[viz1.selectedAttribute]) || (d[viz1.selectedAttribute] < 0)) ? 0 : d[viz1.selectedAttribute]);
             }
             return colorScale(val);
         });
 }
 
 function makeViz1a() {
-    viz1a.redrawFunc = redrawViz1a;  // need this to be able to handle timestep updates
+    viz1.redrawFunc = redrawViz1All; // need this to be able to handle timestep updates
 
     viz1a.tooltip = d3.select("body")
         .append("div")
@@ -390,7 +467,7 @@ function makeViz1a() {
      * Add hover events
      *******************/
     // these events don't change with data, so we can set them here
-    d3.selectAll("path[class^='shape-']")
+    d3.selectAll("#map path[class^='shape-']")
         .on("mouseover", function () {
             d3.select(this).classed("hover-country", true);
         }).on("mouseout", function () {
@@ -411,99 +488,19 @@ function makeViz1a() {
             .attr("fill", "blue")
             .attr("fill-opacity", 0);
 
-    d3.select("rect.click-area")
+    d3.select("#map rect.click-area")
         .style("pointer-events", "all")
         .on("click", function (event) {
             if (!event.ctrlKey) {
-                viz1aSelectedCountries = [];
-                d3.selectAll(".selected-country").classed("selected-country", false);
-                console.log(["removed all countries", viz1aSelectedCountries]);
+                viz1.selectedCountries = [];
+                d3.selectAll("#map .selected-country").classed("selected-country", false);
+                console.log(["removed all countries", viz1.selectedCountries]);
             }
         }).lower();
 
-    /****************************
-    * Set up date slider
-    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
-    ***************************/
-    viz1a.dateSliderValue = 0;
-    viz1a.dateSliderWidth = 400;
-
-    let minDate = d3.min(covidData, d => d.date);
-    let maxDate = d3.max(covidData, d => d.date);
-
-    viz1a.dateXScale = d3.scaleTime()
-        .domain([minDate, maxDate])
-        .range([0, viz1a.dateSliderWidth])
-        .clamp(true);  // prevent dot from going off scale
-
-    viz1a.svgSlider = d3.select("#viz1a-date-slider-wrap")
-        .append("svg")
-            .attr("width", viz1a.dateSliderWidth + 100)
-            .attr("height", "100")
-            .style("vertical-align", "top")
-            .attr("transform", "translate(0, -15)")
-        .append("g")
-            .attr("class", "slider")
-            .attr("transform", "translate(50,50)");
-
-    viz1a.svgSlider.append("line")
-        .attr("class", "date-slider track")
-        .attr("x1", viz1a.dateXScale.range()[0])
-        .attr("x2", viz1a.dateXScale.range()[1])
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-inset")
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-overlay")
-        .call(d3.drag()
-            .on("start.interrupt", function () { viz1a.svgSlider.interrupt(); })
-            .on("start drag", function (event, d) {
-                shortenTransitions = 100;  // shorten all transition durations to 100ms
-                viz1a.dateSliderValue = event.x;
-                dateUpdate(viz1a);
-            })
-            .on("end", function () {
-                shortenTransitions = 0;  // go back to normal transitions
-            })
-        );
-
-    viz1a.svgSlider.insert("g", ".date-slider.track-overlay")
-        .attr("class", "date-slider date-ticks")
-        .attr("transform", "translate(0," + 18 + ")")
-        .selectAll("text")
-        .data(viz1a.dateXScale.ticks(10))
-        .enter()
-        .append("text")
-            .attr("x", viz1a.dateXScale)
-            .attr("y", 10)
-            .attr("text-anchor", "middle")
-            .text(function (d) { return formatMonthYear(d); });
-
-    viz1a.dateHandle = viz1a.svgSlider.insert("circle", ".date-slider.track-overlay")
-        .attr("class", "date-slider handle")
-        .attr("r", 9);
-
-    viz1a.dateLabel = viz1a.svgSlider.append("text")
-        .attr("class", "label")
-        .attr("text-anchor", "middle")
-        .text(formatDateLong(minDate))
-        .attr("transform", "translate(0," + (-25) + ")");
-
-
-    viz1a.playButton = d3.select("#viz1a-date-slider-wrap .play-button");
-    viz1a.playButton
-        .on("click", function () {
-            let button = d3.select(this);
-            if (button.text() == "Pause") {
-                clearInterval(viz1a.dateTimer);
-                button.text("Play");
-            } else {
-                viz1a.dateTimer = setInterval(dateStep, 400, viz1a);
-                button.text("Pause");
-            }
-        });
-
-    theDate = maxDate;
-    dateUpdate(viz1a, maxDate);
+    makeDateSlider(viz1, "#viz1-date-slider-wrap");
+    viz1.selectedDate = d3.max(covidData, d => d.date);
+    dateUpdate(viz1, viz1.selectedDate);
 }
 
 Promise.all([
@@ -548,13 +545,13 @@ Promise.all([
                     .text(attrRow.display_name);
 
             // initialize attribute to first row in data dictionary
-            if (i == 0) { attribute = attrRow.variable_name; }
+            if (i == 0) { viz1.selectedAttribute = attrRow.variable_name; }
         });
 
     // create listener
     selectAttr
         .on("change", function () {
-            attribute = d3.select(this)
+            viz1.selectedAttribute = d3.select(this)
                 .select("option:checked")
                 .attr("value");  // want value (variable_name), not the text (display_name)
             redrawViz1a();
@@ -565,14 +562,14 @@ Promise.all([
     * Checkbox for determining how the max is set on scales.
     **************************/
     let checkbox = d3.select("input[name='viz1-scale-checkbox']");
-    scaleMaxToDate = checkbox.property("checked");
+    viz1.scaleMaxToDate = checkbox.property("checked");
 
     checkbox.on("click", function () {
-        scaleMaxToDate = d3.select(this).property("checked");
+        viz1.scaleMaxToDate = d3.select(this).property("checked");
         
         // can't do scale to today's max and quantile at the same time
-        if(quantileColor) {
-            quantileColor = false;
+        if(viz1.quantileColor) {
+            viz1.quantileColor = false;
             d3.select("input[name='viz1-quantile-checkbox']").property("checked", false);
         }
 
@@ -583,20 +580,19 @@ Promise.all([
     * Checkbox for determining how the max is set on scales.
     **************************/
     checkbox = d3.select("input[name='viz1-quantile-checkbox']");
-    quantileColor = checkbox.property("checked");
+    viz1.quantileColor = checkbox.property("checked");
 
     checkbox.on("click", function () {
-        quantileColor = d3.select(this).property("checked");
+        viz1.quantileColor = d3.select(this).property("checked");
 
         // can't do scale to today's max and quantile at the same time
-        if(scaleMaxToDate) {
-            scaleMaxToDate = false;
+        if(viz1.scaleMaxToDate) {
+            viz1.scaleMaxToDate = false;
             d3.select("input[name='viz1-scale-checkbox']").property("checked", false);
         }
 
         redrawViz1a();
     })
-
 
     /***************************
     * Create the viz!
