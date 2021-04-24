@@ -29,7 +29,7 @@ var viz1 = {
     shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
 }
 
-var viz1a = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1a
+var viz1a = {};  // these are specific to viz1a
 
 
 function dictRowParser(d) {
