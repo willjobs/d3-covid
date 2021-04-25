@@ -1,19 +1,21 @@
-// NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
-// will overwrite any classes that already exist there, which may not be what you want.
 const FONT_SIZES = {
     tick: 12,
     axisTitle: 14,
-    title: 16
+    title: 16,
+    markerText: 12,
+    legendLabel: 10,
+    lineLabel: 10
 }
 
 // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
 const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
     .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
 
-var viz1b = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz1b
 
 var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
-var formatDate = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
+var formatDateLong = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
+var formatDate_yyyymmdd = d3.timeFormat("%Y-%m-%d");
+var formatDateMonthDay = d3.timeFormat("%b %e");
 var formatMonthYear = function (d) {
     if (d3.timeFormat("%m")(d) == "01") {
         return d3.timeFormat("%Y")(d);
@@ -24,12 +26,16 @@ var formatMonthYear = function (d) {
 
 var covidData;
 var dataDict;
-var viz1bSelectedCountries = [];
-var attribute;
-var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
 
-// delete when ready for date slider
-var theDate;
+// these properties apply to all 3 of the viz1 visualizations
+var viz1 = {
+    selectedCountries: [],
+    scaleMaxToDate: false,  // if false, set scales' maxes to the max over whole timeframe; if true, set max to just values observed on selected date
+    quantileColor: false,    // if true, use scaleSequentialQuantile for colors; if false, use scaleSequential
+    shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
+}
+
+var viz1b = {};  // these are specific to viz1b
 
 function dictRowParser(d) {
     return {
@@ -38,7 +44,8 @@ function dictRowParser(d) {
         display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
         sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
         category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
-        numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        numeric_column : d.numeric_column,  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+        larger_is :      d.larger_is  // determines whether a large value is "good", "bad", or "neutral", which determines the color scale on the map
     };
 }
 
@@ -130,18 +137,100 @@ function dataRowParser(d) {
     };
 }
 
-// function used to handle updating dates from a date slider
+function makeDateSlider(viz, cssLocation) {
+    /****************************
+    * Set up date slider
+    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
+    ***************************/
+    viz.dateSliderValue = 0;
+    viz.dateSliderWidth = 400;
 
+    let minDate = d3.min(covidData, d => d.date);
+    let maxDate = d3.max(covidData, d => d.date);
+
+    viz.dateXScale = d3.scaleTime()
+        .domain([minDate, maxDate])
+        .range([0, viz.dateSliderWidth])
+        .clamp(true);  // prevent dot from going off scale
+
+    viz.svgSlider = d3.select("#viz1-date-slider-wrap")
+        .append("svg")
+            .attr("width", viz.dateSliderWidth + 100)
+            .attr("height", "100")
+            .style("vertical-align", "top")
+            .attr("transform", "translate(0, -15)")
+        .append("g")
+            .attr("class", "slider")
+            .attr("transform", "translate(50,50)");
+
+    viz.svgSlider.append("line")
+        .attr("class", "date-slider track")
+        .attr("x1", viz.dateXScale.range()[0])
+        .attr("x2", viz.dateXScale.range()[1])
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-inset")
+        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+        .attr("class", "date-slider track-overlay")
+        .call(d3.drag()
+            .on("start.interrupt", function () { viz.svgSlider.interrupt(); })
+            .on("start drag", function (event, d) {
+                viz.shortenTransitions = 100;  // shorten all transition durations to 100ms
+                viz.dateSliderValue = event.x;
+                dateUpdate(viz);
+            })
+            .on("end", function () {
+                viz.shortenTransitions = 0;  // go back to normal transitions
+            })
+        );
+
+    viz.svgSlider.insert("g", ".date-slider.track-overlay")
+        .attr("class", "date-slider date-ticks")
+        .attr("transform", "translate(0," + 18 + ")")
+        .selectAll("text")
+        .data(viz.dateXScale.ticks(10))
+        .enter()
+        .append("text")
+            .attr("x", viz.dateXScale)
+            .attr("y", 10)
+            .attr("text-anchor", "middle")
+            .text(function (d) { return formatMonthYear(d); });
+
+    viz.dateHandle = viz.svgSlider.insert("circle", ".date-slider.track-overlay")
+        .attr("class", "date-slider handle")
+        .attr("r", 9);
+
+    viz.dateLabel = viz.svgSlider.append("text")
+        .attr("class", "label")
+        .attr("text-anchor", "middle")
+        .text(formatDateLong(minDate))
+        .attr("transform", "translate(0," + (-25) + ")");
+
+
+    viz.playButton = d3.select(cssLocation + " .play-button");
+    viz.playButton
+        .on("click", function () {
+            let button = d3.select(this);
+            if (button.text() == "Pause") {
+                clearInterval(viz.dateTimer);
+                button.text("Play");
+            } else {
+                viz.dateTimer = setInterval(dateStep, 400, viz);
+                button.text("Pause");
+            }
+        });
+}
+
+// function used to handle updating dates from a date slider
 function dateUpdate(viz, setDate = null) {
-    newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
+    const newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
 
     // update position and text of label according to slider scale
     viz.dateHandle.attr("cx", viz.dateXScale(newDate));
     viz.dateLabel
         .attr("x", viz.dateXScale(newDate))
-        .text(formatDate(newDate));
+        .text(formatDateLong(newDate));
 
-    theDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
+    viz.selectedDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
     viz.redrawFunc();
 }
 
@@ -160,31 +249,27 @@ function dateStep(viz) {
 }
 
 function redrawViz1b() {
-
-    let viz1bData = covidData.filter(d => viz1bSelectedCountries.includes(d.countryname) &&
-        d.date.getTime() == theDate.getTime());
-
-    let var_metadata = dataDict.filter(d => d.variable_name == attribute)[0];
+    const viz1bData = covidData.filter(d => viz1.selectedCountries.includes(d.countryname) &&
+                                            (d.date.getTime() == viz1.selectedDate.getTime()));
+    const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
 
     // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
-    let attributeName = var_metadata.display_name;
-    let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : attribute;
+    const attributeName = varMetadata.display_name;
+    const attributeData = (varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : viz1.selectedAttribute);
 
     // in case we removed all the data, don't show any axes or gridlines
-    let axis_visibility = viz1bData.length == 0 ? "none" : "inherit";
-    d3.selectAll(".x").style("display", axis_visibility);
-    d3.selectAll(".y").style("display", axis_visibility);
-    d3.selectAll(".grid").style("display", axis_visibility);
+    const axisVisibility = viz1bData.length == 0 ? "none" : "inherit";
+    d3.selectAll(".viz1b .x").style("display", axisVisibility);
+    d3.selectAll(".viz1b .y").style("display", axisVisibility);
+    d3.selectAll(".viz1b .grid").style("display", axisVisibility);
 
-    viz1b.title.text(attributeName + " on " + formatDate(theDate));
+    viz1b.title.text(attributeName + " on " + formatDateLong(viz1.selectedDate));
 
     /******
-        * update y-axis
+    * update y-axis
     ******/
-    //** Doing it this way so that we can maintain the order in which the user selected countries
-    // Uncomment the below if you want to do it in the order of the dataset, not the user's selection:
-    //      viz1b.yScale.domain(viz1bData.map(d => d.countryname));
-    viz1b.yScale.domain(viz1bSelectedCountries);
+    // Doing it this way so that we can maintain the order in which the user selected countries
+    viz1b.yScale.domain(viz1.selectedCountries);
 
     d3.select(".viz1b.y.axis")
         .transition()
@@ -196,11 +281,10 @@ function redrawViz1b() {
     d3.selectAll(".viz1b.y.axis path").remove();
 
     /******
-        * update x-axis
+    * update x-axis
     ******/
     // see if this variable is ordinal; if it is, use its "_numeric" column
-
-    if ((var_metadata.data_type == "ordinal")) {
+    if ((varMetadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
         let maxValue = d3.max(covidData, d => d[attributeData]);
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
@@ -216,11 +300,12 @@ function redrawViz1b() {
         // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
         //    the selected countries. This is because we don't want the scales to keep jumping 
         //    around for a given set of countries and making it hard to see changes.
-        if (var_metadata.category == 'aggregate indices') {
+        if ((!viz1.scaleMaxToDate) && (varMetadata.category == "aggregate indices")) {
             maxValue = 100.0;
         } else {
-            maxValue = d3.max(covidData.filter(d => viz1bSelectedCountries.includes(d.countryname)),
-                d => d[attributeData]);
+            const dataset = (viz1.scaleMaxToDate ? viz1bData : covidData);
+            maxValue = d3.max(dataset.filter(d => viz1.selectedCountries.includes(d.countryname)),
+                              d => d[attributeData]);
         }
 
         viz1b.xScale.domain([0, maxValue]);
@@ -230,10 +315,9 @@ function redrawViz1b() {
         viz1b.xAxisTicks.ticks(5);
     }
 
-
     d3.select(".viz1b.x.axis")
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 300)
         .call(viz1b.xAxis);
 
     // add the X gridlines
@@ -258,87 +342,97 @@ function redrawViz1b() {
 
     bars.exit()
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 300)
         .style("fill-opacity", 0)
         .remove();
 
     bars.enter()
         .append("rect")
-        .attr("fill", d => continentColors(d.continent))
-        .classed("viz1b bar data", true)
-        .attr("id", function (d, i) { return "viz1b-bar" + i })
+            .attr("fill", d => continentColors(d.continent))
+            .classed("viz1b bar data", true)
+            .attr("id", function (d, i) { return "viz1b-bar" + i })
         .merge(bars)
-        .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-        .attr("y", d => viz1b.yScale(d.countryname))
-        .attr("height", viz1b.yScale.bandwidth())
-        // handle negative values if they arise by setting to 0
-        .attr("width", d => viz1b.xScale(d[attributeData]));
+            .transition()
+            .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
+            .attr("y", d => viz1b.yScale(d.countryname))
+            .attr("height", viz1b.yScale.bandwidth())
+            .attr("width", d => viz1b.xScale(isNaN(d[attributeData]) || (d[attributeData] < 0) ? 0 : d[attributeData]));
 
     /**********************
-    
+    * use "invisible" bars to allow hovering even over very small values
     ***********************/
     let invisibleBars = viz1b.svg.selectAll("rect.invisible")
         .data(viz1bData, d => d.countryname);
 
     invisibleBars.exit()
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 300)
         .style("fill-opacity", 0)
         .remove();
 
     invisibleBars.enter()
         .append("rect")
-        .attr("fill-opacity", "0.05")
-        .classed("viz1b bar invisible", true)
+            .attr("fill-opacity", "0.05")
+            .classed("viz1b bar invisible", true)
         .merge(invisibleBars)
-        .on("mouseover", function () {
-            d3.select(this).classed("hover-bar", true);
-        }).on("mousemove", function (event, d) {
-            viz1b.tooltip
-                .style("left", event.pageX - 50 + "px")
-                .style("top", event.pageY - 70 + "px")
-                .style("display", "inline-block")
-                // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
-                // Also, don't show NaN or "NA". If no data, write "No data"
-                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[attribute] == "number" && isNaN(d[attribute])) || d[attribute] == "NA") ? "No data" : d[attribute]));
-        }).on("mouseout", function () {
-            d3.select(this).classed("hover-bar", false);
-            viz1b.tooltip.style("display", "none");
-        })
-        .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-        .attr("y", d => viz1b.yScale(d.countryname))
-        .attr("height", viz1b.yScale.bandwidth())
-        .attr("width", d => viz1b.xScale(viz1b.xScale.domain()[1]));
+            .on("mouseover", function () {
+                d3.select(this).classed("hover-bar", true);
+            }).on("mousemove", function (event, d) {
+                let dataText = d[viz1.selectedAttribute];
+                if(typeof dataText == "number") {
+                    dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
+                } else {
+                    dataText = (dataText == "NA" ? "No data" : dataText);
+                }
+                
+                viz1b.tooltip
+                    .style("left", event.pageX - 50 + "px")
+                    .style("top", event.pageY - 70 + "px")
+                    .style("display", "inline-block")
+                    // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
+                    // Also, don't show NaN or "NA". If no data, write "No data"
+                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
+            }).on("mouseout", function () {
+                d3.select(this).classed("hover-bar", false);
+                viz1b.tooltip.style("display", "none");
+            })
+            .transition()
+            .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
+            .attr("y", d => viz1b.yScale(d.countryname))
+            .attr("height", viz1b.yScale.bandwidth())
+            .attr("width", d => viz1b.xScale(viz1b.xScale.domain()[1]));
 
     /**********************
-        * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0)
+    * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0)
     **********************/
     let noData = viz1b.svg.selectAll("text.no-data")
-        .data(viz1bData, d => d.countryname);
+                          .data(viz1bData, d => d.countryname);
 
     noData.exit()
         .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+        .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 300)
         .style("fill-opacity", 0)
         .remove();
 
     noData.enter()
         .append("text")
-        .classed("viz1b no-data", true)
-        .attr("id", function (d, i) { return "viz1b-nodata" + i })
+            .classed("viz1b no-data", true)
+            .attr("id", function (d, i) { return "viz1b-nodata" + i })
         .merge(noData)
-        .transition()
-        .duration(shortenTransitions > 0 ? shortenTransitions : 500)
-        .attr("y", d => viz1b.yScale(d.countryname) + 0.5 * viz1b.yScale.bandwidth())
-        .attr("dy", "0.3em")
-        .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
-        .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
+            .transition()
+            .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
+            .attr("y", d => viz1b.yScale(d.countryname) + 0.5 * viz1b.yScale.bandwidth())
+            .attr("dy", "0.3em")
+            .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
+            .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
+}
+
+function redrawViz1All() {
+    redrawViz1b();
 }
 
 function makeViz1b() {
-    viz1b.redrawFunc = redrawViz1b;  // need this to be able to handle timestep updates
+    viz1.redrawFunc = redrawViz1All;  // need this to be able to handle timestep updates
 
     viz1b.margin = { top: 30, right: 20, bottom: 80, left: 175 };
 
@@ -352,11 +446,11 @@ function makeViz1b() {
 
     viz1b.svg = d3.select("div.viz1b")
         .append("svg")
-        .attr("width", viz1b.dims.width)
-        .attr("height", viz1b.dims.height)
-        .classed("viz1b", true)
+            .attr("width", viz1b.dims.width)
+            .attr("height", viz1b.dims.height)
+            .classed("viz1b", true)
         .append("g")
-        .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
+            .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
 
     viz1b.yScale = d3.scaleBand()
         .rangeRound([0, viz1b.dims.innerHeight - 10])
@@ -402,89 +496,9 @@ function makeViz1b() {
         .attr("transform", "translate(0, -10)")
         .style("font-size", FONT_SIZES.title + "px");
 
-    /****************************
-    * Set up date slider
-    * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
-    ***************************/
-    viz1b.dateSliderValue = 0;
-    viz1b.dateSliderWidth = 400;
-
-    let minDate = d3.min(covidData, d => d.date);
-    let maxDate = d3.max(covidData, d => d.date);
-
-    viz1b.dateXScale = d3.scaleTime()
-        .domain([minDate, maxDate])
-        .range([0, viz1b.dateSliderWidth])
-        .clamp(true);  // prevent dot from going off scale
-
-    viz1b.svgSlider = d3.select("#viz1b-date-slider-wrap")
-        .append("svg")
-        .attr("width", viz1b.dateSliderWidth + 100)
-        .attr("height", "100")
-        .style("vertical-align", "top")
-        .attr("transform", "translate(0, -15)")
-        .append("g")
-        .attr("class", "slider")
-        .attr("transform", "translate(50,50)");
-
-    viz1b.svgSlider.append("line")
-        .attr("class", "date-slider track")
-        .attr("x1", viz1b.dateXScale.range()[0])
-        .attr("x2", viz1b.dateXScale.range()[1])
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-inset")
-        .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
-        .attr("class", "date-slider track-overlay")
-        .call(d3.drag()
-            .on("start.interrupt", function () { viz1b.svgSlider.interrupt(); })
-            .on("start drag", function (event, d) {
-                shortenTransitions = 100;  // shorten all transition durations to 100ms
-                viz1b.dateSliderValue = event.x;
-                dateUpdate(viz1b);
-            })
-            .on("end", function () {
-                shortenTransitions = 0;  // go back to normal transitions
-            })
-        );
-
-    viz1b.svgSlider.insert("g", ".date-slider.track-overlay")
-        .attr("class", "date-slider date-ticks")
-        .attr("transform", "translate(0," + 18 + ")")
-        .selectAll("text")
-        .data(viz1b.dateXScale.ticks(10))
-        .enter()
-        .append("text")
-        .attr("x", viz1b.dateXScale)
-        .attr("y", 10)
-        .attr("text-anchor", "middle")
-        .text(function (d) { return formatMonthYear(d); });
-
-    viz1b.dateHandle = viz1b.svgSlider.insert("circle", ".date-slider.track-overlay")
-        .attr("class", "date-slider handle")
-        .attr("r", 9);
-
-    viz1b.dateLabel = viz1b.svgSlider.append("text")
-        .attr("class", "label")
-        .attr("text-anchor", "middle")
-        .text(formatDate(minDate))
-        .attr("transform", "translate(0," + (-25) + ")");
-
-
-    viz1b.playButton = d3.select("#viz1b-date-slider-wrap .play-button");
-    viz1b.playButton
-        .on("click", function () {
-            let button = d3.select(this);
-            if (button.text() == "Pause") {
-                clearInterval(viz1b.dateTimer);
-                button.text("Play");
-            } else {
-                viz1b.dateTimer = setInterval(dateStep, 400, viz1b);
-                button.text("Pause");
-            }
-        });
-
-    theDate = maxDate;
-    dateUpdate(viz1b, maxDate);
+    makeDateSlider(viz1, "#viz1-date-slider-wrap");
+    viz1.selectedDate = d3.max(covidData, d => d.date);
+    dateUpdate(viz1, viz1.selectedDate);
 }
 
 // load the data and kick things off
@@ -522,9 +536,9 @@ Promise.all([
                 .each(function () { countries.push(this.value) }); // for each select country, get its value (name)
 
             // want to maintain ordering of original selection
-            viz1bSelectedCountries = viz1bSelectedCountries.filter(d => countries.includes(d));
-            added = countries.filter(d => !viz1bSelectedCountries.includes(d));
-            viz1bSelectedCountries = viz1bSelectedCountries.concat(added);
+            viz1.selectedCountries = viz1.selectedCountries.filter(d => countries.includes(d));
+            added = countries.filter(d => !viz1.selectedCountries.includes(d));
+            viz1.selectedCountries = viz1.selectedCountries.concat(added);
 
             redrawViz1b();
         });
@@ -552,19 +566,19 @@ Promise.all([
             display_name: d.display_name
         }))
         .forEach(function (attrRow, i) {
-            d3.select("optgroup[label='" + attrRow.category + "']")
+            d3.select("select#viz1-attributes optgroup[label='" + attrRow.category + "']")
                 .append("option")
-                .attr("value", attrRow.variable_name)
-                .text(attrRow.display_name);
+                    .attr("value", attrRow.variable_name)
+                    .text(attrRow.display_name);
 
             // initialize attribute to first row in data dictionary
-            if (i == 0) { attribute = attrRow.variable_name; }
+            if (i == 0) { viz1.selectedAttribute = attrRow.variable_name; }
         });
 
     // create listener
     selectAttr
         .on("change", function () {
-            attribute = d3.select(this)
+            viz1.selectedAttribute = d3.select(this)
                 .select("option:checked")
                 .attr("value");  // want value (variable_name), not the text (display_name)
             redrawViz1b();
@@ -574,7 +588,6 @@ Promise.all([
     * Create the viz!
     **************************/
     makeViz1b();
-    redrawViz1b();
     d3.selectAll(".spinner").remove();
 
 }).catch(function (err) {
