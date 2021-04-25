@@ -259,7 +259,6 @@ function dateStep(viz) {
 }
 
 function redrawViz1a() {
-    console.log("redrawViz1a");
     const viz1aData = covidData.filter(d => d.date.getTime() == viz1.selectedDate.getTime());
     const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
     const attributeName = varMetadata.display_name;
@@ -296,7 +295,7 @@ function redrawViz1a() {
 
     if (varMetadata.data_type == "ordinal") {
         // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
-        ordinalValues = Array.from(new Set(covidData.map(d => (d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute]) ))).sort();
+        ordinalValues = Array.from(new Set(covidData.map(d => (((d[viz1.selectedAttribute] == "NA") || (d[viz1.selectedAttribute] == "")) ? "0" : d[viz1.selectedAttribute]) ))).sort();
         colorScale = d3.scaleOrdinal(colorPalette[ordinalValues.length]).domain(ordinalValues);  // note: the max # of colors for this color scale is 9
     } else if (viz1.quantileColor) {
         colorScale = d3.scaleSequentialQuantile(colorPalette)
@@ -376,11 +375,9 @@ function redrawViz1a() {
                     d3.select("#map .selected-country")
                         .classed("selected-country", false)
                         .classed("selected-country", true);
-                    console.log(["added " + country, viz1.selectedCountries]);
                 } else {
                     viz1.selectedCountries = viz1.selectedCountries.filter(d => d != country);
                     d3.select(this).classed("selected-country", false);
-                    console.log(["removed " + country, viz1.selectedCountries]);
                 }
             } else {
                 if (viz1.selectedCountries.length > 0) {
@@ -389,17 +386,14 @@ function redrawViz1a() {
                     const includedCountry = viz1.selectedCountries.includes(country);
                     viz1.selectedCountries = [];
                     d3.selectAll("#map .selected-country").classed("selected-country", false);
-                    console.log(["removed all countries", viz1.selectedCountries]);
 
                     if (!includedCountry) {
                         viz1.selectedCountries.push(country);
                         d3.select(this).classed("selected-country", true);
-                        console.log(["added " + country, viz1.selectedCountries]);
                     }
                 } else {
                     viz1.selectedCountries.push(country);
                     d3.select(this).classed("selected-country", true);
-                    console.log(["added " + country, viz1.selectedCountries]);
                 }
             }
 
@@ -422,7 +416,6 @@ function redrawViz1a() {
 }
 
 function redrawViz1b() {
-    console.log("redrawViz1b");
     const viz1bData = covidData.filter(d => viz1.selectedCountries.includes(d.countryname) &&
                                             (d.date.getTime() == viz1.selectedDate.getTime()));
     const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
@@ -602,7 +595,6 @@ function redrawViz1b() {
 }
 
 function redrawViz1c() {
-    console.log("redrawViz1c");
     // get all data for selected countries
     const viz1cData = covidData.filter(d => viz1.selectedCountries.includes(d.countryname));
     const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
@@ -770,14 +762,12 @@ function redrawViz1c() {
 }
 
 function redrawViz1All() {
-    console.log("redrawViz1All");
     redrawViz1a();
     redrawViz1b();
     redrawViz1c();
 }
 
 function makeViz1a() {
-    console.log("makeViz1a");
     viz1a.tooltip = d3.select("body")
         .append("div")
             .classed("viz1a tooltip", true)
@@ -881,13 +871,11 @@ function makeViz1a() {
                 // selection changed: re-draw!
                 redrawViz1b();
                 redrawViz1c();
-                console.log(["removed all countries", viz1.selectedCountries]);
             }
         }).lower();
 }
 
 function makeViz1b() {
-    console.log("makeViz1b");
     viz1b.margin = { top: 10, right: 20, bottom: 80, left: 175 };
     let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 15;
 
@@ -956,7 +944,6 @@ function makeViz1b() {
 }
 
 function makeViz1c() {
-    console.log("makeViz1c");
     viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
     let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 25;
 
