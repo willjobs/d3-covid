@@ -889,11 +889,13 @@ function makeViz1a() {
 function makeViz1b() {
     console.log("makeViz1b");
     viz1b.margin = { top: 10, right: 20, bottom: 80, left: 175 };
+    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 15;
 
     viz1b.dims = {
-        height: 350, width: d3.max([450,  // no smaller than 450px wide
-            d3.min([650, // no larger than 650px wide
-                Math.floor(window.innerWidth / 2)])])
+        //height: 350, width: d3.max([450,  // no smaller than 450px wide
+        //    d3.min([650, // no larger than 650px wide
+        //        Math.floor(window.innerWidth / 2)])])
+        height: 300, width: vizWidth
     };
     viz1b.dims["innerHeight"] = viz1b.dims.height - viz1b.margin.top - viz1b.margin.bottom
     viz1b.dims["innerWidth"] = viz1b.dims.width - viz1b.margin.left - viz1b.margin.right
@@ -902,6 +904,8 @@ function makeViz1b() {
         .append("svg")
             .attr("width", viz1b.dims.width)
             .attr("height", viz1b.dims.height)
+            .attr("viewBox", `0 0 ${viz1b.dims.width} ${viz1b.dims.height}`)
+            .attr("preserveAspectRatio", "xMinYMin")
             .classed("viz1b", true)
         .append("g")
             .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
@@ -954,11 +958,13 @@ function makeViz1b() {
 function makeViz1c() {
     console.log("makeViz1c");
     viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
+    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 25;
 
     viz1c.dims = {
-        height: 350, width: d3.max([400,  // no smaller than 800px wide
-            d3.min([600, // no larger than 1000px wide
-                Math.floor(window.innerWidth / 2)])])
+        //height: 350, width: d3.max([400,  // no smaller than 800px wide
+        //    d3.min([600, // no larger than 1000px wide
+        //        Math.floor(window.innerWidth / 2)])])
+        height: 300, width: vizWidth
     };
     viz1c.dims["innerHeight"] = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom
     viz1c.dims["innerWidth"] = viz1c.dims.width - viz1c.margin.left - viz1c.margin.right
@@ -967,6 +973,8 @@ function makeViz1c() {
         .append("svg")
             .attr("width", viz1c.dims.width)
             .attr("height", viz1c.dims.height)
+            .attr("viewBox", `0 0 ${viz1c.dims.width} ${viz1c.dims.height}`)
+            .attr("preserveAspectRatio", "xMinYMin")
             .classed("viz1c", true)
         .append("g")
             .attr("transform", "translate(" + viz1c.margin.left + "," + viz1c.margin.top + ")");
@@ -1216,8 +1224,8 @@ function makeViz1c() {
 
 Promise.all([
     d3.csv("../data/data_dictionary.csv", dictRowParser),
-    d3.csv("../data/covid_data.csv", dataRowParser),
-    //d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
+    //d3.csv("../data/covid_data.csv", dataRowParser),
+    d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
     d3.json("../data/countries-mapshaper-simplified_v2.json")
 ]).then(function (files) {
     dataDict = files[0];
