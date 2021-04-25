@@ -806,7 +806,7 @@ function redrawViz3() {
     /******************
     * update x and y axes
     ******************/
-    function updateAxis(xOrY="x") {
+    const updateAxis = function(xOrY="x") {
         let scale, axis, axisTicks;
         if(xOrY == "x") {
             scale = viz3.xScale;
@@ -978,7 +978,7 @@ function makeViz1a() {
 
     // each path will have a classname = their ISO code (e.g., class="USA")
     // only give countries in our dataset a class of shape-[ISO code], and make other countries' polygons gray
-    function styleLeafletPaths(feature) {
+    const styleLeafletPaths = function(feature) {
         return {
             className: commonISOCodes.includes(feature.properties.ISO_A3) ? "shape-" + feature.properties.ISO_A3 : null,
             fillColor: commonISOCodes.includes(feature.properties.ISO_A3) ? "blue" : "#eee",
@@ -1575,13 +1575,18 @@ Promise.all([
     selectCountry = d3.select("select#viz3-countries");
 
     // get unique countries, then append <option> to <select>
-    Array.from(new Set(covidData.map(d => d.countryname)))
-        .sort()  // put country names in order in dropdown menu
-        .forEach(function(country) {
-            selectCountry.append('option')
-            .attr("value", country)
-            .text(country);
-        });
+    const uniqueCountries = Array.from(new Set(covidData.map(d => d.countryname))).sort();
+    
+    // put country into dropdown menu
+    uniqueCountries.forEach(function(country) {
+        selectCountry.append('option')
+        .attr("value", country)
+        .text(country);
+    });
+
+    // initialize with all countries selected
+    d3.selectAll("select#viz3-countries option").attr("selected", "selected");
+    viz3.selectedCountries = uniqueCountries;
 
     // create listener
     selectCountry.on("change", function() {
@@ -1603,7 +1608,7 @@ Promise.all([
     /***************************
     * Viz 3: Make both attribute dropdowns. Add attributes with <optgroup> for each category, <option> for each attribute
     **************************/
-    function makeAttributeDropdown(xOrY = "x") {
+    const makeAttributeDropdown = function(xOrY = "x") {
         const selectAttr = d3.select(`select#viz3-${xOrY}attributes`);
 
         // first, put categories in as optgroups
@@ -1627,6 +1632,15 @@ Promise.all([
                         .text(attrRow.display_name)
                         .property("checked", i==0);
                 });
+        
+        // initialize with x dropdown = "New cases" and y dropdown = "School closing"
+        d3.selectAll("select#viz3-xattributes option")
+            .filter(function() {return (d3.select(this).text() == "New cases")})
+            .attr("selected", "selected");
+
+        d3.selectAll("select#viz3-yattributes option")
+            .filter(function() {return (d3.select(this).text() == "School closing")})
+            .attr("selected", "selected");
         
         // create listener
         selectAttr.on("change", function() {
