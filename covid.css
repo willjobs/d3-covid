@@ -119,7 +119,7 @@ body {
 #map path {
     /*fill: #000;*/
     fill-opacity: .8;
-    stroke: #fff;
+    stroke: #aaa;
     stroke-width: 1.5px;
 }
 
@@ -128,8 +128,8 @@ body {
     fill-opacity: .7;
 }
 
-.selected-country {
-    stroke: #999;
+#map path.selected-country {
+    stroke: #000;
 
     -webkit-animation: pulsate 1s ease-out;
     -webkit-animation-iteration-count: infinite;
@@ -142,25 +142,25 @@ body {
 }
 
 @-webkit-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; }
-    50%   { opacity:1.0; stroke-width: 1; }
-    100%  { opacity:0.6; stroke-width: 0.5; }
+    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
+    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @-moz-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; }
-    50%   { opacity:1.0; stroke-width: 1; }
-    100%  { opacity:0.6; stroke-width: 0.5; }
+    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
+    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @-ms-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; }
-    50%   { opacity:1.0; stroke-width: 1; }
-    100%  { opacity:0.6; stroke-width: 0.5; }
+    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
+    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @keyframes pulsate {
-    0%    { opacity:0.4; stroke-width: 3; }
-    50%   { opacity:1.0; stroke-width: 5; }
-    100%  { opacity:0.4; stroke-width: 3; }
+    0%    { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2;}
+    50%   { opacity:1.0; stroke-width: 2; stroke-dasharray: 3,3}
+    100%  { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2}
 }
