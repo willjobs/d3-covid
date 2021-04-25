@@ -38,7 +38,7 @@ var viz1 = {
 // these are specific to viz1c
 var viz1c = {
     clicked: null  // if a user clicks on a country, this will be a string with the country name
-};  
+};
 
 
 function dictRowParser(d) {
