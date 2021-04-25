@@ -1023,7 +1023,7 @@ function makeViz1a() {
 }
 
 function makeViz1b() {
-    viz1b.margin = { top: 10, right: 20, bottom: 80, left: 175 };
+    viz1b.margin = { top: 10, right: 20, bottom: 80, left: 150 };
     let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 65;
 
     viz1b.dims = {
@@ -1084,7 +1084,7 @@ function makeViz1b() {
 
 function makeViz1c() {
     viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
-    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 75;
+    let vizWidth = d3.max([450, d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 75]);
 
     viz1c.dims = {
         height: 300, width: vizWidth
@@ -1488,7 +1488,6 @@ Promise.all([
     geomData = files[2];
 
     console.log("Imported all data!");
-
 
     /***************************
     * Viz 1: Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
