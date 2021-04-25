@@ -253,10 +253,6 @@ function dateStep(viz) {
     }
 }
 
-function redrawViz1All() {
-    redrawViz1c();
-}
-
 function redrawViz1c() {
     // get all data for selected countries
     const viz1cData = covidData.filter(d => viz1.selectedCountries.includes(d.countryname));
@@ -268,7 +264,7 @@ function redrawViz1c() {
     viz1c.attributeData = varMetadata.data_type == "ordinal" ? varMetadata.numeric_column : viz1.selectedAttribute;
 
     // in case we removed all the data, don't show any axes or gridlines
-    let axisVisibility = (viz1cData.length == 0 ? "none" : "inherit");
+    const axisVisibility = (viz1cData.length == 0 ? "none" : "inherit");
     d3.selectAll(".viz1c .x").style("display", axisVisibility);
     d3.selectAll(".viz1c .y").style("display", axisVisibility);
     d3.selectAll(".viz1c .grid").style("display", axisVisibility);
@@ -282,13 +278,11 @@ function redrawViz1c() {
 
     viz1c.title.text(viz1c.attributeName + " over time");
 
-
     /******
-        * update y-axis (attribute)
+    * update y-axis (attribute)
     ******/
     // see if this variable is ordinal; if it does, use its "_numeric" column
-
-    if ((varMetadata.data_type == "ordinal")) {
+    if (varMetadata.data_type == "ordinal") {
         // get largest value over entire dataset, not just selection
         let maxValue = d3.max(covidData, d => d[viz1c.attributeData]);
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
@@ -420,6 +414,10 @@ function redrawViz1c() {
             });
 }
 
+function redrawViz1All() {
+    redrawViz1c();
+}
+
 function makeViz1c() {
     viz1.redrawFunc = redrawViz1All;  // need this to be able to handle timestep updates
 
@@ -529,8 +527,6 @@ function makeViz1c() {
         .attr("y2", viz1c.dims.innerHeight)
         .lower();  // put the date line below the data
 
-    dateUpdate(viz1, viz1.selectedDate);
-
     /**********
     * Add hover effects from https://observablehq.com/@d3/multi-line-chart
     * Define these objects and events one time rather than re-create them each time we enter reDraw
@@ -566,10 +562,10 @@ function makeViz1c() {
         .attr("x", 5);
 
     /******** 
-        Idea from https://bl.ocks.org/larsenmtl/e3b8b7c2ca4787f77d78f58d41c3da91
-        Key idea: We can't hover over a <g> element because it doesn't detect mouse movements, only svg elements do.
-                    So, we add a g element at the end of the svg (so it's on top of all the other elements in the svg),
-                    and fill it with a rectangle shifted to match the visualization <g>.
+    Idea from https://bl.ocks.org/larsenmtl/e3b8b7c2ca4787f77d78f58d41c3da91
+    Key idea: We can't hover over a <g> element because it doesn't detect mouse movements, only svg elements do.
+                So, we add a g element at the end of the svg (so it's on top of all the other elements in the svg),
+                and fill it with a rectangle shifted to match the visualization <g>.
     ********/
 
     d3.select("svg.viz1c")
@@ -644,7 +640,13 @@ function makeViz1c() {
             }
 
             let closestValue = ((isNaN(closestCountryRow[viz1c.attributeData]) || (closestCountryRow[viz1c.attributeData] < 0)) ? 0 : closestCountryRow[viz1c.attributeData]);
-            let closestValueText = (isNaN(closestCountryRow[viz1c.attributeData]) ? "No data" : Math.round(1000 * closestCountryRow[viz1.selectedAttribute])) / 1000;  // rounding to nearest 3 digits; also note: we're showing the ordinal values "1-Local", etc.
+            let closestValueText = closestCountryRow[viz1.selectedAttribute];
+
+            if(typeof closestValueText == "number") {
+                closestValueText = (isNaN(closestValueText) ? "No data" : Math.round(1000 * closestValueText) / 1000) ; // round to nearest 3 decimal places
+            } else {
+                closestValueText = (closestValueText == "NA" ? "No data" : closestValueText);
+            }
 
             // for the non-active lines, set them to light gray. For the active/hovered line, leave its stroke as the default blue
             viz1c.svg.selectAll(".viz1c.line")
@@ -679,12 +681,15 @@ function makeViz1c() {
             marker.select("text.marker-text.attribute").text(viz1c.attributeName + ": " + closestValueText);
             marker.raise();  // ensures that the text is always readable over the lines
         });
+    
+    // kick off the re-draw
+    dateUpdate(viz1, viz1.selectedDate);
 }
 
 // load the data and kick things off
 Promise.all([
     d3.csv("../data/data_dictionary.csv", dictRowParser),
-    d3.csv("../data/covid_data.csv", dataRowParser),
+    d3.csv("../data/covid_data.csv", dataRowParser)
     //d3.csv("../data/covid_oxford+owid_20210414-185830.csv", dataRowParser),
 ]).then(function (files) {
     dataDict = files[0];
@@ -768,7 +773,6 @@ Promise.all([
     * Create the viz!
     **************************/
     makeViz1c();
-    redrawViz1c();
     d3.selectAll(".spinner").remove();
 
 }).catch(function (err) {
