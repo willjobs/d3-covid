@@ -154,19 +154,19 @@ function makeDateSlider(viz, cssLocation) {
     let maxDate = d3.max(covidData, d => d.date);
 
     viz.dateXScale = d3.scaleTime()
-        .domain([minDate, maxDate])
-        .range([0, viz.dateSliderWidth])
-        .clamp(true);  // prevent dot from going off scale
+                       .domain([minDate, maxDate])
+                       .range([0, viz.dateSliderWidth])
+                       .clamp(true);  // prevent dot from going off scale
 
-    viz.svgSlider = d3.select("#viz1-date-slider-wrap")
-        .append("svg")
-            .attr("width", viz.dateSliderWidth + 100)
-            .attr("height", "100")
-            .style("vertical-align", "top")
-            .attr("transform", "translate(0, -15)")
-        .append("g")
-            .attr("class", "slider")
-            .attr("transform", "translate(50,50)");
+    viz.svgSlider = d3.select(cssLocation)
+                      .append("svg")
+                          .attr("width", viz.dateSliderWidth + 100)
+                          .attr("height", "100")
+                          .style("vertical-align", "top")
+                          .attr("transform", "translate(0, -15)")
+                      .append("g")
+                          .attr("class", "slider")
+                          .attr("transform", "translate(50,50)");
 
     viz.svgSlider.append("line")
         .attr("class", "date-slider track")
@@ -201,19 +201,19 @@ function makeDateSlider(viz, cssLocation) {
             .text(function (d) { return formatMonthYear(d); });
         
     // make the years in the scale bold face
-    d3.selectAll("#viz1-date-slider-wrap .date-ticks text")
+    d3.selectAll(cssLocation + " .date-ticks text")
         .style("font-weight", function(d) {return (isNaN(1*formatMonthYear(d)) ? "normal" : "bolder")});
 
 
     viz.dateHandle = viz.svgSlider.insert("circle", ".date-slider.track-overlay")
-        .attr("class", "date-slider handle")
-        .attr("r", 9);
+                        .attr("class", "date-slider handle")
+                        .attr("r", 9);
 
     viz.dateLabel = viz.svgSlider.append("text")
-        .attr("class", "label")
-        .attr("text-anchor", "middle")
-        .text(formatDateLong(minDate))
-        .attr("transform", "translate(0," + (-25) + ")");
+                       .attr("class", "label")
+                       .attr("text-anchor", "middle")
+                       .text(formatDateLong(minDate))
+                       .attr("transform", "translate(0," + (-25) + ")");
 
 
     viz.playButton = d3.select(cssLocation + " .play-button");
@@ -237,8 +237,8 @@ function dateUpdate(viz, setDate = null) {
     // update position and text of label according to slider scale
     viz.dateHandle.attr("cx", viz.dateXScale(newDate));
     viz.dateLabel
-        .attr("x", viz.dateXScale(newDate))
-        .text(formatDateLong(newDate));
+       .attr("x", viz.dateXScale(newDate))
+       .text(formatDateLong(newDate));
 
     viz.selectedDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
     viz.redrawFunc();
@@ -344,12 +344,8 @@ function redrawViz1a() {
                 .style("left", 20);
     }
 
-    
-
     d3.selectAll("#map .tick text").style("font-size", FONT_SIZES.legendLabel + "px");
     d3.select("#map .legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
-    
-
 
     // bind data to each path
     d3.selectAll("#map path[class^='shape-']")
@@ -511,7 +507,7 @@ function redrawViz1b() {
     // Create the bars: there will be one with the actual data, and one that is invisible
     // which extends the length of the chart and activates the hover effect
     let bars = viz1b.svg.selectAll("rect.data")
-        .data(viz1bData, d => d.countryname);
+                    .data(viz1bData, d => d.countryname);
 
     bars.exit()
         .transition()
@@ -535,7 +531,7 @@ function redrawViz1b() {
     * use "invisible" bars to allow hovering even over very small values
     ***********************/
     let invisibleBars = viz1b.svg.selectAll("rect.invisible")
-        .data(viz1bData, d => d.countryname);
+                             .data(viz1bData, d => d.countryname);
 
     invisibleBars.exit()
         .transition()
@@ -775,14 +771,14 @@ function redrawViz1All() {
 
 function makeViz1a() {
     viz1a.tooltip = d3.select("body")
-        .append("div")
-            .classed("viz1a tooltip", true)
-            .style("z-index", 999)  // use z-index to make sure the tooltip shows up above the map
-            .style("pointer-events", "none");  
+                      .append("div")
+                          .classed("viz1a tooltip", true)
+                          .style("z-index", 999)  // use z-index to make sure the tooltip shows up above the map
+                          .style("pointer-events", "none");  
 
     viz1a.title = d3.select(".viz1a.title span")
-        .style("font-size", FONT_SIZES.title + "px")
-        .style("font-weight", "bold");
+                    .style("font-size", FONT_SIZES.title + "px")
+                    .style("font-weight", "bold");
 
     // get unique iso_codes
     covidISOCodes = Array.from(new Set(covidData.map(d => d.iso_code)));
@@ -804,8 +800,8 @@ function makeViz1a() {
     // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
     // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
     map = new L.Map("map")
-        .setView([40.97989807, 7.734375], 2)
-        .setMaxBounds(maxBounds);
+               .setView([40.97989807, 7.734375], 2)
+               .setMaxBounds(maxBounds);
 
     // to use openstreetmap instead:
     //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -895,22 +891,22 @@ function makeViz1b() {
     viz1b.dims["innerWidth"] = viz1b.dims.width - viz1b.margin.left - viz1b.margin.right
 
     viz1b.svg = d3.select("div.viz1b")
-        .append("svg")
-            .attr("width", viz1b.dims.width)
-            .attr("height", viz1b.dims.height)
-            .attr("viewBox", `0 0 ${viz1b.dims.width} ${viz1b.dims.height}`)
-            .attr("preserveAspectRatio", "xMinYMin")
-            .classed("viz1b", true)
-        .append("g")
-            .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
+                  .append("svg")
+                      .attr("width", viz1b.dims.width)
+                      .attr("height", viz1b.dims.height)
+                      .attr("viewBox", `0 0 ${viz1b.dims.width} ${viz1b.dims.height}`)
+                      .attr("preserveAspectRatio", "xMinYMin")
+                      .classed("viz1b", true)
+                  .append("g")
+                      .attr("transform", "translate(" + viz1b.margin.left + "," + viz1b.margin.top + ")");
 
     viz1b.yScale = d3.scaleBand()
-        .rangeRound([0, viz1b.dims.innerHeight - 10])
-        .paddingInner(0.1);  // rangeRound ensures all pixel values are non-fractional
+                     .rangeRound([0, viz1b.dims.innerHeight - 10])
+                     .paddingInner(0.1);  // rangeRound ensures all pixel values are non-fractional
 
     viz1b.xScale = d3.scaleLinear()
-        .rangeRound([0, viz1b.dims.innerWidth])
-        .clamp(true);  // any values outside the domain will be mapped to the bounds of the range
+                     .rangeRound([0, viz1b.dims.innerWidth])
+                     .clamp(true);  // any values outside the domain will be mapped to the bounds of the range
 
 
     // make y-axis
@@ -939,14 +935,6 @@ function makeViz1b() {
     viz1b.tooltip = d3.select("body")
         .append("div")
         .classed("viz1b tooltip", true);
-
-    //viz1b.title = viz1b.svg.append("text")
-    //    .classed("viz1b title", true)
-    //    .attr("x", 0)
-    //    .attr("y", 0)
-    //    .attr("text-anchor", "start")
-    //    .attr("transform", "translate(0, -10)")
-    //    .style("font-size", FONT_SIZES.title + "px");
 }
 
 function makeViz1c() {
@@ -954,30 +942,27 @@ function makeViz1c() {
     let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 75;
 
     viz1c.dims = {
-        //height: 350, width: d3.max([400,  // no smaller than 800px wide
-        //    d3.min([600, // no larger than 1000px wide
-        //        Math.floor(window.innerWidth / 2)])])
         height: 300, width: vizWidth
     };
     viz1c.dims["innerHeight"] = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom
     viz1c.dims["innerWidth"] = viz1c.dims.width - viz1c.margin.left - viz1c.margin.right
 
     viz1c.svg = d3.select("div.viz1c")
-        .append("svg")
-            .attr("width", viz1c.dims.width)
-            .attr("height", viz1c.dims.height)
-            .attr("viewBox", `0 0 ${viz1c.dims.width} ${viz1c.dims.height}`)
-            .attr("preserveAspectRatio", "xMinYMin")
-            .classed("viz1c", true)
-        .append("g")
-            .attr("transform", "translate(" + viz1c.margin.left + "," + viz1c.margin.top + ")");
+                  .append("svg")
+                      .attr("width", viz1c.dims.width)
+                      .attr("height", viz1c.dims.height)
+                      .attr("viewBox", `0 0 ${viz1c.dims.width} ${viz1c.dims.height}`)
+                      .attr("preserveAspectRatio", "xMinYMin")
+                      .classed("viz1c", true)
+                  .append("g")
+                      .attr("transform", "translate(" + viz1c.margin.left + "," + viz1c.margin.top + ")");
 
     /***************
     * make y-axis (attribute)
     ***************/
     viz1c.yScale = d3.scaleLinear()
-        .rangeRound([viz1c.dims.innerHeight - 10, 0])  // [high, low] so it plots correctly
-        .clamp(true); // any values outside the domain will be mapped to the bounds of the range
+                     .rangeRound([viz1c.dims.innerHeight - 10, 0])  // [high, low] so it plots correctly
+                     .clamp(true); // any values outside the domain will be mapped to the bounds of the range
 
     viz1c.svg.append("g")
         .classed("viz1c y axis", true);
@@ -991,11 +976,11 @@ function makeViz1c() {
     let maxDate = d3.max(covidData, d => d.date);
 
     viz1c.xScale = d3.scaleTime()
-        .domain([minDate, maxDate])
-        .rangeRound([0, viz1c.dims.innerWidth]);
+                     .domain([minDate, maxDate])
+                     .rangeRound([0, viz1c.dims.innerWidth]);
 
     viz1c.xAxis = d3.axisBottom(viz1c.xScale)
-        .tickFormat(formatMonthYear);
+                    .tickFormat(formatMonthYear);
 
     viz1c.svg.append("g")
         .classed("viz1c x axis", true)
@@ -1009,8 +994,8 @@ function makeViz1c() {
     * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
     ***************/
     viz1c.xAxisGrid = d3.axisBottom(viz1c.xScale)
-        .tickSize(-viz1c.dims.innerHeight)
-        .tickFormat("");
+                        .tickSize(-viz1c.dims.innerHeight)
+                        .tickFormat("");
 
     viz1c.svg.append("g")
         .classed("viz1c x grid", true)
@@ -1022,8 +1007,8 @@ function makeViz1c() {
     * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
     ***************/
     viz1c.yAxisTicks = d3.axisLeft(viz1c.yScale)
-        .tickSize(-viz1c.dims.innerWidth)
-        .tickFormat("");
+                         .tickSize(-viz1c.dims.innerWidth)
+                         .tickFormat("");
 
     viz1c.svg.append("g")
         .classed("viz1c y grid", true);
@@ -1040,16 +1025,16 @@ function makeViz1c() {
         .map(d => parseDate(d));
 
     viz1c.dateLine = viz1c.svg.append("line")
-        .classed("viz1c date-line", true)
-        .attr("stroke", "black")
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "3 3")
-        .attr("fill", "none")
-        .attr("x1", viz1c.xScale(viz1.selectedDate))
-        .attr("x2", viz1c.xScale(viz1.selectedDate))
-        .attr("y1", 0)
-        .attr("y2", viz1c.dims.innerHeight)
-        .lower();  // put the date line below the data
+                          .classed("viz1c date-line", true)
+                          .attr("stroke", "black")
+                          .attr("stroke-width", 2)
+                          .attr("stroke-dasharray", "3 3")
+                          .attr("fill", "none")
+                          .attr("x1", viz1c.xScale(viz1.selectedDate))
+                          .attr("x2", viz1c.xScale(viz1.selectedDate))
+                          .attr("y1", 0)
+                          .attr("y2", viz1c.dims.innerHeight)
+                          .lower();  // put the date line below the data
 
     /**********
     * Add hover effects from https://observablehq.com/@d3/multi-line-chart
@@ -1061,8 +1046,8 @@ function makeViz1c() {
     viz1c.attributeName = null;
 
     const marker = viz1c.svg.append("g")
-        .classed("viz1c marker", true)
-        .style("display", "none");
+                        .classed("viz1c marker", true)
+                        .style("display", "none");
 
     marker.append("circle")
         .attr("r", 2.5);
@@ -1214,14 +1199,14 @@ function makeViz1ContinentLegend() {
     dims["innerWidth"] = dims.width - margin.left - margin.right
 
     let svg = d3.select("div.viz1-continents")
-            .append("svg")
-                .attr("width", dims.width)
-                .attr("height", dims.height)
-                .attr("viewBox", `0 0 ${dims.width} ${dims.height}`)
-                .attr("preserveAspectRatio", "xMinYMin")
-                .classed("viz1", true)
-            .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                .append("svg")
+                    .attr("width", dims.width)
+                    .attr("height", dims.height)
+                    .attr("viewBox", `0 0 ${dims.width} ${dims.height}`)
+                    .attr("preserveAspectRatio", "xMinYMin")
+                    .classed("viz1", true)
+                .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     svg.append(() => legend({
                 color: continentColors,
@@ -1343,5 +1328,5 @@ Promise.all([
     dateUpdate(viz1, viz1.selectedDate);  // this will kick off all the redraws
 
     d3.selectAll(".spinner").remove();
-    d3.select("#viz1-container").attr("style", null);
+    d3.select("#viz1-container").style("margin-left", "0");
 });
