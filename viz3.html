@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:;base64,=">
+    <title>Viz 3</title>
+    <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
+    <link rel="stylesheet" href="covid.css">
+
+    <style>
+        .tooltip {pointer-events: none;}
+    </style>
+</head>
+<body>
+    <div class="spinner"></div>
+
+    <select name="viz3-countries" id="viz3-countries" multiple></select>
+    <br><br>
+
+    <label for="viz3-xattributes">X-Value: </label><select name="viz3-xattributes" id="viz3-xattributes"></select>
+    <br><br>
+
+    <label for="viz3-yattributes">Y-Value: </label><select name="viz3-yattributes" id="viz3-yattributes"></select>
+    <br><br>
+
+
+    <div id="viz3-date-slider-wrap" style="width:600px">
+        <button class="date-slider play-button">Play</button>
+    </div>
+
+    <div class="viz3"></div>
+
+    <script type="text/javascript">
+            // NOTE: always used classed("myclass", true) and not classed("myclass"), because the latter
+            // will overwrite any classes that already exist there, which may not be what you want.
+            const FONT_SIZES = {
+                tick: 12,
+                axisTitle: 14,
+                title: 16
+            }
+
+            // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
+            const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
+            .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
+
+            var viz3 = {};  // empty object which will contain all stuff necessary for drawing/redrawing viz3
+
+            var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
+            var formatDate = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
+            var formatMonthYear = function (d) {
+                if(d3.timeFormat("%m")(d) == "01") {
+                    return d3.timeFormat("%Y")(d);
+                } else {
+                    return d3.timeFormat("%b")(d);
+                }
+            }
+
+            var covidData;
+            var dataDict;
+            var viz3SelectedCountries = [];
+            var xattribute;
+            var yattribute;
+            var shortenTransitions = 0;  // this is to allow us to speed up transitions when dragging the date slider
+
+            // delete when ready for date slider
+            var theDate;
+
+            function dictRowParser(d) {
+                return {
+                    variable_name :  d.variable_name,  // name of attribute in CSV
+                    data_type :      d.data_type,  // string, date, numeric, or ordinal
+                    display_name :   d.display_name,  // pretty name of variable, for dropdowns, titles, etc.
+                    sort_order :     parseInt(d.sort_order),  // when showing in dropdown menus, sort in this order
+                    category :       d.category,   // when grouping variables (e.g., in a summary table, these are the groupings)
+                    numeric_column : d.numeric_column  // for ordinal columns, e.g., c1_school_closing, there is a corresponding "numeric" column
+                };
+            }
+
+            function dataRowParser(d) {
+                return {
+                    countryname :                                  d.countryname,
+                    date :                                         parseDate(d.date),
+                    continent :                                    d.continent,
+                    new_cases :                                    parseFloat(d.new_cases),
+                    new_cases_per_million :                        parseFloat(d.new_cases_per_million),
+                    total_cases :                                  parseFloat(d.total_cases),
+                    total_cases_per_million :                      parseFloat(d.total_cases_per_million),
+                    new_deaths :                                   parseFloat(d.new_deaths),
+                    new_deaths_per_million :                       parseFloat(d.new_deaths_per_million),
+                    total_deaths :                                 parseFloat(d.total_deaths),
+                    total_deaths_per_million :                     parseFloat(d.total_deaths_per_million),
+                    new_tests :                                    parseFloat(d.new_tests),
+                    new_tests_per_thousand :                       parseFloat(d.new_tests_per_thousand),
+                    total_tests :                                  parseFloat(d.total_tests),
+                    total_tests_per_thousand :                     parseFloat(d.total_tests_per_thousand),
+                    positive_rate :                                parseFloat(d.positive_rate),
+                    reproduction_rate :                            parseFloat(d.reproduction_rate),
+                    new_vaccinations :                             parseFloat(d.new_vaccinations),
+                    new_vaccinations_per_hundred :                 parseFloat(d.new_vaccinations_per_hundred),
+                    people_vaccinated :                            parseFloat(d.people_vaccinated),
+                    people_vaccinated_per_hundred :                parseFloat(d.people_vaccinated_per_hundred),
+                    people_fully_vaccinated :                      parseFloat(d.people_fully_vaccinated),
+                    people_fully_vaccinated_per_hundred :          parseFloat(d.people_fully_vaccinated_per_hundred),
+                    icu_patients :                                 parseFloat(d.icu_patients),
+                    icu_patients_per_million :                     parseFloat(d.icu_patients_per_million),
+                    hosp_patients :                                parseFloat(d.hosp_patients),
+                    hosp_patients_per_million :                    parseFloat(d.hosp_patients_per_million),
+                    weekly_icu_admissions :                        parseFloat(d.weekly_icu_admissions),
+                    weekly_icu_admissions_per_million :            parseFloat(d.weekly_icu_admissions_per_million),
+                    weekly_hosp_admissions :                       parseFloat(d.weekly_hosp_admissions),
+                    weekly_hosp_admissions_per_million :           parseFloat(d.weekly_hosp_admissions_per_million),
+                    stringency_index :                             parseFloat(d.stringency_index),
+                    government_response_index :                    parseFloat(d.government_response_index),
+                    containment_health_index :                     parseFloat(d.containment_health_index),
+                    economic_support_index :                       parseFloat(d.economic_support_index),
+                    c1_school_closing :                            d.c1_school_closing,
+                    c1_school_closing_numeric :                    parseFloat(d.c1_school_closing_numeric),
+                    c2_workplace_closing :                         d.c2_workplace_closing,
+                    c2_workplace_closing_numeric :                 parseFloat(d.c2_workplace_closing_numeric),
+                    c3_cancel_public_events :                      d.c3_cancel_public_events,
+                    c3_cancel_public_events_numeric :              parseFloat(d.c3_cancel_public_events_numeric),
+                    c4_restrictions_on_gatherings :                d.c4_restrictions_on_gatherings,
+                    c4_restrictions_on_gatherings_numeric :        parseFloat(d.c4_restrictions_on_gatherings_numeric),
+                    c5_close_public_transport :                    d.c5_close_public_transport,
+                    c5_close_public_transport_numeric :            parseFloat(d.c5_close_public_transport_numeric),
+                    c6_stay_at_home_requirements :                 d.c6_stay_at_home_requirements,
+                    c6_stay_at_home_requirements_numeric :         parseFloat(d.c6_stay_at_home_requirements_numeric),
+                    c7_restrictions_on_internal_movement :         d.c7_restrictions_on_internal_movement,
+                    c7_restrictions_on_internal_movement_numeric : parseFloat(d.c7_restrictions_on_internal_movement_numeric),
+                    c8_international_travel_controls :             d.c8_international_travel_controls,
+                    c8_international_travel_controls_numeric :     parseFloat(d.c8_international_travel_controls_numeric),
+                    e1_income_support :                            d.e1_income_support,
+                    e1_income_support_numeric :                    parseFloat(d.e1_income_support_numeric),
+                    e2_debt_contract_relief :                      d.e2_debt_contract_relief,
+                    e2_debt_contract_relief_numeric :              parseFloat(d.e2_debt_contract_relief_numeric),
+                    e3_fiscal_measures :                           parseFloat(d.e3_fiscal_measures),
+                    e4_international_support :                     parseFloat(d.e4_international_support),
+                    h1_public_information_campaigns :              d.h1_public_information_campaigns,
+                    h1_public_information_campaigns_numeric :      parseFloat(d.h1_public_information_campaigns_numeric),
+                    h2_testing_policy :                            d.h2_testing_policy,
+                    h2_testing_policy_numeric :                    parseFloat(d.h2_testing_policy_numeric),
+                    h3_contact_tracing :                           d.h3_contact_tracing,
+                    h3_contact_tracing_numeric :                   parseFloat(d.h3_contact_tracing_numeric),
+                    h6_facial_coverings :                          d.h6_facial_coverings,
+                    h6_facial_coverings_numeric :                  parseFloat(d.h6_facial_coverings_numeric),
+                    h7_vaccination_policy :                        d.h7_vaccination_policy,
+                    h7_vaccination_policy_numeric :                parseFloat(d.h7_vaccination_policy_numeric),
+                    h4_emergency_investment_in_healthcare :        parseFloat(d.h4_emergency_investment_in_healthcare),
+                    h5_investment_in_vaccines :                    parseFloat(d.h5_investment_in_vaccines),
+                    population :                                   parseFloat(d.population),
+                    population_density :                           parseFloat(d.population_density),
+                    median_age :                                   parseFloat(d.median_age),
+                    aged_65_older :                                parseFloat(d.aged_65_older),
+                    aged_70_older :                                parseFloat(d.aged_70_older),
+                    gdp_per_capita :                               parseFloat(d.gdp_per_capita),
+                    extreme_poverty :                              parseFloat(d.extreme_poverty),
+                    cardiovasc_death_rate :                        parseFloat(d.cardiovasc_death_rate),
+                    diabetes_prevalence :                          parseFloat(d.diabetes_prevalence),
+                    female_smokers :                               parseFloat(d.female_smokers),
+                    male_smokers :                                 parseFloat(d.male_smokers),
+                    life_expectancy :                              parseFloat(d.life_expectancy),
+                    human_development_index :                      parseFloat(d.human_development_index)
+                };
+            }
+
+            // function used to handle updating dates from a date slider
+            // need to add dateYScale?
+
+            function dateUpdate(viz, setDate = null) {
+                newDate = setDate == null ? viz.dateXScale.invert(viz.dateSliderValue) : setDate;
+
+                // update position and text of label according to slider scale
+                viz.dateHandle.attr("cx", viz.dateXScale(newDate));
+                viz.dateLabel
+                .attr("x", viz.dateXScale(newDate))
+                .text(formatDate(newDate));
+
+                theDate = d3.timeDay.floor(newDate);  // round down to whole day at midnight
+                viz.redrawFunc();
+            }
+            
+            // function used to move date slider forward one day
+            function dateStep(viz) {
+                if(viz.dateSliderValue < 0) {
+                    viz.dateSliderValue = 0;
+                }
+                dateUpdate(viz);
+                viz.dateSliderValue = Math.floor(viz.dateSliderValue + (viz.dateSliderWidth / 151));
+                if (viz.dateSliderValue > viz.dateSliderWidth) {
+                    viz.dateSliderValue = 0;
+                    clearInterval(viz.dateTimer);
+                    viz.playButton.text("Play");
+                }
+            }
+
+            function redrawviz3() {
+                let viz3Data = covidData.filter(d => viz3SelectedCountries.includes(d.countryname) && 
+                  d.date.getTime() == theDate.getTime());
+
+                let xvar_metadata = dataDict.filter(d => d.variable_name == xattribute)[0];
+                let yvar_metadata = dataDict.filter(d => d.variable_name == yattribute)[0];
+
+
+                // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
+                let xattributeName = xvar_metadata.display_name;
+                let yattributeName = yvar_metadata.display_name;
+                let xattributeData = xvar_metadata.data_type == "ordinal" ? xvar_metadata.numeric_column : xattribute;
+                let yattributeData = yvar_metadata.data_type == "ordinal" ? yvar_metadata.numeric_column : yattribute;
+
+                // in case we removed all the data, don't show any axes or gridlines
+                let axis_visibility = viz3Data.length == 0 ? "display:none" : "";
+                d3.selectAll(".x").attr("style", axis_visibility);
+               d3.selectAll(".y").attr("style", axis_visibility);
+                d3.selectAll(".grid").attr("style", axis_visibility);
+
+
+                /******
+                 * update y-axis
+                 ******/
+                //** Doing it this way so that we can maintain the order in which the user selected countries
+                // Uncomment the below if you want to do it in the order of the dataset, not the user's selection:
+
+
+                /******
+                 * update x-axis
+                 ******/
+                // see if this variable is ordinal; if it does, use its "_numeric" column
+
+                if((xvar_metadata.data_type == "ordinal")) {
+                    // get largest value over entire dataset, not just selection
+                    let xmaxValue = d3.max(covidData, d => d[xattributeData]);
+
+                    // set tick values to exactly these values
+                    // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
+                    viz3.xScale.domain([0, xmaxValue]);
+                    viz3.xAxis.tickValues(d3.range(0, xmaxValue + 0.5, 0.5));
+                } else {
+                    // If we're showing an aggregate index like "stringency index", always show 0 to 100.
+                    // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
+                    //    the selected countries. This is because we don't want the scales to keep jumping 
+                    //    around for a given set of countries and making it hard to see changes.
+                    if(xvar_metadata.category == 'aggregate indices') {
+                        xmaxValue =  100.0;
+                    } else{
+                        xmaxValue = d3.max(covidData.filter(d => viz3SelectedCountries.includes(d.countryname)),
+                          d => d[xattributeData]);
+                    }
+                    
+                    viz3.xScale.domain([0, xmaxValue]);
+
+                    // if we switched from an ordinal variable, get rid of the manually specified ticks
+                    viz3.xAxis.tickValues(null);
+                    viz3.xAxisTicks.ticks(5);
+                }    
+
+
+
+                d3.select(".viz3.x.axis")
+                .transition()
+                .duration(300)
+                .call(viz3.xAxis);
+                
+                // update x-axis title in case the attribute changed
+                d3.select("text.viz3.x.axis-title")
+                .text(xattributeName);
+
+                 // add the X gridlines
+                // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+                // d3.select(".viz3.grid")
+                //     .call(viz3.xAxisTicks);
+
+                d3.selectAll('.viz3.x.axis .tick text')
+                    .attr("transform","rotate(-45)")
+                    .attr("text-anchor","end");
+
+
+                if((yvar_metadata.data_type == "ordinal")) {
+                    // get largest value over entire dataset, not just selection
+                    let ymaxValue = d3.max(covidData, d => d[yattributeData]);
+
+                    // set tick values to exactly these values
+                    // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
+                    viz3.yScale.domain([0, ymaxValue]);
+                    viz3.yAxis.tickValues(d3.range(0, ymaxValue + 0.5, 0.5));
+                } else {
+                    // If we're showing an aggregate index like "stringency index", always show 0 to 100.
+                    // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
+                    //    the selected countries. This is because we don't want the scales to keep jumping 
+                    //    around for a given set of countries and making it hard to see changes.
+                    if(yvar_metadata.category == 'aggregate indices') {
+                        ymaxValue =  100.0;
+                    } else{
+                        ymaxValue = d3.max(covidData.filter(d => viz3SelectedCountries.includes(d.countryname)),
+                          d => d[yattributeData]);
+                    }
+                    
+                    viz3.yScale.domain([0, ymaxValue]);
+
+                    // if we switched from an ordinal variable, get rid of the manually specified ticks
+                    viz3.yAxis.tickValues(null);
+                    viz3.yAxisTicks.ticks(5);
+                }    
+
+                d3.select(".viz3.y.axis")
+                .transition()
+                .duration(300)
+                .call(viz3.yAxis);
+                
+                // update y-axis title in case the attribute changed
+                d3.select("text.viz3.y.axis-title")
+                .text(yattributeName);
+
+
+
+                // set all ticks' fonts. These aren't styles/CSS, these are attributes
+                d3.selectAll(".viz3.axis")
+                .attr("font-size", FONT_SIZES.tick)
+                .attr("font-family", "sans-serif");
+
+                // Create the bars: there will be one with the actual data, and one that is invisible
+                // which extends the length of the chart and activates the hover effect
+
+                dots = viz3.svg.selectAll("circle.dot")
+                    .data(viz3Data, d => d.countryname);
+
+                dots.exit()
+                .transition()
+                .duration(shortenTransitions > 0 ? shortenTransitions : 300)
+                .style("fill-opacity", 0)
+                .remove();
+
+                dots.enter()
+                .append("circle")
+                        //.attr("class","dot")
+                        .attr("r", 3.5)
+                        .attr("fill", d => continentColors(d.continent))
+                        .classed("dot", true)
+                        .merge(dots)
+                        .on("mouseover", function(event, d) {
+                            d3.select(this).classed("hover", true);
+                            
+                            viz3.tooltip.style("left", event.pageX - 50 + "px")
+                            .style("top", event.pageY - 70 + "px")
+                            .style("display", "inline-block")
+                            // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
+                            .html((d.countryname) + "<br><b>" + xattributeName + "</b>: " + (isNaN(d[xattribute]) ? "No Data" : d[xattribute])+ "<br><b>" + yattributeName + "</b>: " + (isNaN(d[yattribute]) ? "No Data" : d[yattribute]));
+                        }).on("mouseout", function() {
+                            d3.select(this).classed("hover-bar", false);
+                            viz3.tooltip.style("display", "none");
+                        })
+                        .transition()
+                        .duration(500)
+                        .attr("cy", d => viz3.yScale(isNaN(d[yattributeData]) ? 0 : d[yattributeData]))
+                        .attr("cx", d => viz3.xScale(isNaN(d[xattributeData]) ? 0 : d[xattributeData]));
+
+                /**********************
+                 * Add a text label specifying "No data" when a country doesn't have any data (to differentiate it from 0) // how to do this for y attribute too
+                 **********************/
+                 // let noData = viz3.svg.selectAll("text.no-data")
+                 // .data(viz3Data, d => d.countryname);
+
+                 // noData.exit()
+                 // .transition()
+                 // .duration(300)
+                 // .style("fill-opacity", 0)
+                 // .remove();
+
+                 // noData.enter()
+                 // .append("text")
+                 // .classed("viz3 no-data", true)
+                 // .attr("id", function(d,i) {return "viz3-nodata" + i})
+                 // .merge(noData)
+                 // .transition()
+                 // .duration(500)
+                 // .attr("y", d => viz3.yScale(d.countryname))
+                 // .attr("dy", "0.3em")
+                 // .style("visibility", d => (isNaN(d[xattributeData]) || d[xattributeData] == "NA" ? "visible" : "hidden"))
+                 // .text(d => (isNaN(d[xattributeData]) || d[xattributeData] == "NA" ? "No data" : ""));
+             }
+
+             function makeviz3() {
+                viz3.redrawFunc = redrawviz3;  // need this to be able to handle timestep updates
+
+                viz3.margin = {top: 20, right: 150, bottom: 90, left: 150};
+
+                viz3.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
+                                                    d3.min([900, // no larger than 900px wide
+                                                        Math.floor(window.innerWidth / 2)])])};
+                viz3.dims["innerHeight"] = viz3.dims.height - viz3.margin.top - viz3.margin.bottom
+                viz3.dims["innerWidth"] = viz3.dims.width - viz3.margin.left - viz3.margin.right
+
+                viz3.svg = d3.select("div.viz3")
+                .append("svg")
+                .attr("width", viz3.dims.width)
+                .attr("height", viz3.dims.height)
+                .classed("viz3", true)
+                .append("g")
+                .attr("transform", "translate(" + viz3.margin.left + "," + viz3.margin.top + ")");
+
+                viz3.yScale = d3.scaleLinear()
+                                .rangeRound([viz3.dims.innerHeight - 10, 0]); // [high, low] so it plots correctly
+
+                                viz3.xScale = d3.scaleLinear()
+                                .rangeRound([0, viz3.dims.innerWidth]); // rangeRound ensures all pixel values are non-fractional
+
+                // make y-axis
+                viz3.svg.append("g")
+                .classed("viz3 y axis", true);
+
+                viz3.yAxis = d3.axisLeft(viz3.yScale);
+
+                // y-axis title
+                d3.select("svg.viz3").append("text")
+                .classed("viz3 y axis-title", true)
+                .attr("transform",
+                    "translate(" + Math.floor(viz3.margin.left/4) + " ," + 
+                    Math.floor(viz3.dims.height/2) + ") rotate(-90)" )
+                .style("text-anchor", "middle")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", FONT_SIZES.axisTitle)
+                .text("");
+
+                viz3.svg.append("g")
+                .classed("viz3 y grid", true)
+                .attr("transform", "translate(0," + viz3.dims.innerHeight + ")");
+                
+                viz3.yAxisTicks = d3.axisLeft(viz3.yScale)
+                .tickSize(-viz3.dims.innerWidth)
+                .tickFormat("");
+
+                
+                
+                // make x-axis
+                viz3.svg.append("g")
+                .classed("viz3 x axis", true)
+                .attr("transform", "translate(0," + viz3.dims.innerHeight + ")");
+
+                viz3.xAxis = d3.axisBottom(viz3.xScale);
+
+                // x-axis title
+                viz3.svg.append("text")
+                .classed("viz3 x axis-title", true)
+                .attr("transform",
+                    "translate(" + Math.floor(viz3.dims.innerWidth/2 - viz3.margin.left/2) + " ," + 
+                    (viz3.dims.innerHeight + viz3.margin.top + 50) + ")")
+                .style("text-anchor", "middle")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", FONT_SIZES.axisTitle)
+                .text("");
+                
+                // x-axis gridlines
+                // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
+                viz3.svg.append("g")
+                .classed("viz3 x grid", true)
+                .attr("transform", "translate(0," + viz3.dims.innerHeight + ")");
+                
+                viz3.xAxisTicks = d3.axisBottom(viz3.xScale)
+                .tickSize(-viz3.dims.innerHeight)
+                .tickFormat("");
+
+                viz3.tooltip = d3.select("body")
+                .append("div")
+                .classed("viz3 tooltip", true);
+
+                var legend = viz3.svg.selectAll(".legend")
+                .data(continentColors.domain())
+                .enter().append("g")
+                .attr("class", "legend")
+                .attr("transform", function(d, i) { return "translate(150," + (i+5) * 15 + ")"; });
+
+      // draw legend colored rectangles
+      legend.append("rect")
+      .attr("x", viz3.dims.innerWidth - 10)
+      .attr("width", 10)
+      .attr("height", 10)
+      .style("fill", continentColors);
+
+      // draw legend text
+      legend.append("text")
+      .attr("x", viz3.dims.innerWidth - 10)
+      .attr("y", 5)
+      .attr("dy", ".25em")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", FONT_SIZES.legend)
+      .style("text-anchor", "end")
+      .text(function(d) { return d;})
+      var legend = viz3.svg.selectAll(".legend")
+      .data(continentColors.domain())
+      .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(20," + (i+5) * 20 + ")"; });
+
+      // draw legend colored rectangles
+      legend.append("rect")
+      .attr("x", viz3.dims.innerWidth - 5)
+      .attr("width", 10)
+      .attr("height", 10)
+      .style("fill", continentColors);
+
+
+
+
+                /****************************
+                * Set up date slider
+                * Slider code adapted from: https://bl.ocks.org/officeofjane/47d2b0bfeecfcb41d2212d06d095c763
+                ***************************/
+                viz3.dateSliderValue = 0;
+                viz3.dateSliderWidth = 400;
+                
+                let minDate = d3.min(covidData, d => d.date);
+                let maxDate = d3.max(covidData, d => d.date);
+
+                viz3.dateXScale = d3.scaleTime()
+                .domain([minDate, maxDate])
+                .range([0, viz3.dateSliderWidth])
+                                        .clamp(true);  // prevent dot from going off scale
+
+                                        viz3.svgSlider = d3.select("#viz3-date-slider-wrap")
+                                        .append("svg")
+                                        .attr("width", viz3.dateSliderWidth+100)
+                                        .attr("height", "100")
+                                        .style("vertical-align", "top")
+                                        .attr("transform", "translate(0, -15)")
+                                        .append("g")
+                                        .attr("class", "slider")
+                                        .attr("transform", "translate(50,50)");
+
+                                        viz3.svgSlider.append("line")
+                                        .attr("class", "date-slider track")
+                                        .attr("x1", viz3.dateXScale.range()[0])
+                                        .attr("x2", viz3.dateXScale.range()[1])
+                    // add dateYscale?
+                    .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+                    .attr("class", "date-slider track-inset")
+                    .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+                    .attr("class", "date-slider track-overlay")
+                    .call(d3.drag()
+                        .on("start.interrupt", function() { viz3.svgSlider.interrupt(); })
+                        .on("start drag", function(event, d) {
+                            viz3.dateSliderValue = event.x;
+                            dateUpdate(viz3); 
+                        })
+                        );
+
+                    viz3.svgSlider.insert("g", ".date-slider.track-overlay")
+                    .attr("class", "date-slider date-ticks")
+                    .attr("transform", "translate(0," + 18 + ")")
+                    .selectAll("text")
+                    .data(viz3.dateXScale.ticks(10))
+                    .enter()
+                    .append("text")
+                    .attr("x", viz3.dateXScale)
+                    .attr("y", 10) // change this to dateYscale?
+                    .attr("text-anchor", "middle")
+                    .text(function(d) { return formatMonthYear(d); });
+
+                    viz3.dateHandle = viz3.svgSlider.insert("circle", ".date-slider.track-overlay")
+                    .attr("class", "date-slider handle")
+                    .attr("r", 9);
+
+                    viz3.dateLabel = viz3.svgSlider.append("text")
+                    .attr("class", "label")
+                    .attr("text-anchor", "middle")
+                    .text(formatDate(minDate))
+                    .attr("transform", "translate(0," + (-25) + ")");
+
+
+                    viz3.playButton = d3.select("#viz3-date-slider-wrap .play-button");
+                    viz3.playButton
+                    .on("click", function() {
+                        let button = d3.select(this);
+                        if (button.text() == "Pause") {
+                            clearInterval(viz3.dateTimer);
+                            button.text("Play");
+                        } else {
+                            viz3.dateTimer = setInterval(dateStep, 800, viz3);
+                            button.text("Pause");
+                        }
+                    });
+
+                    theDate = maxDate;
+                    dateUpdate(viz3, maxDate);
+                }
+
+            // load the data and kick things off
+            Promise.all([
+                d3.csv("data_dictionary.csv", dictRowParser),
+                d3.csv("covid_data.csv", dataRowParser),
+                ]).then(function(files) {
+                    dataDict = files[0];
+                    covidData = files[1];
+
+                    console.log("Imported all data!");
+
+                /***************************
+                * Countries select list. Add countries to select list and set up "change" listener to redraw
+                **************************/
+                selectCountry = d3.select("select#viz3-countries");
+
+                // get unique countries, then append <option> to <select>
+                Array.from(new Set(covidData.map(d => d.countryname)))
+                    .sort()  // put country names in order in dropdown menu
+                    .forEach(function(country) {
+                        selectCountry.append('option')
+                        .attr("value", country)
+                        .text(country);
+                    });
+
+                // create listener
+                selectCountry
+                .on("change", function() {
+                    let countries = [];
+
+                    selected = d3.select(this)
+                    .selectAll("option:checked") 
+                            .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
+
+                        // want to maintain ordering of original selection
+                        viz3SelectedCountries = viz3SelectedCountries.filter(d => countries.includes(d));
+                        added = countries.filter(d => !viz3SelectedCountries.includes(d));
+                        viz3SelectedCountries = viz3SelectedCountries.concat(added);
+
+                        redrawviz3();
+                    });
+
+                
+                /***************************
+                * Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
+                **************************/
+                //add attributes to the attribute dropdown menu;
+                selectxAttr = d3.select("select#viz3-xattributes");
+
+                // first, put categories in as optgroups
+                Array.from(new Set(dataDict.filter(d => d.sort_order != 0)
+                 .map(d => d.category)))
+                .forEach(function(category) {
+                    selectxAttr.append("optgroup")
+                    .attr("label", category)
+                    .classed("select-x", true);
+                });
+                
+                // now put attributes into the optgroups
+                dataDict.filter(d => d.sort_order != 0)
+                .map(d => ({category : d.category, 
+                    variable_name : d.variable_name,
+                    display_name : d.display_name}))
+                .forEach(function(attrRow, i) {
+                    d3.select("optgroup.select-x[label='" + attrRow.category + "']")
+                    .append("option")
+                    .attr("value", attrRow.variable_name)
+                    .text(attrRow.display_name)
+                    .attr("checked", i==0);
+
+                            // initialize attribute to first row in data dictionary
+                            if(i == 0) {xattribute = attrRow.variable_name;}
+                        });
+                
+                // create listener
+                selectxAttr
+                .on("change", function() {
+                    xattribute = d3.select(this)
+                    .select("option:checked") 
+                                        .attr("value");  // want value (variable_name), not the text (display_name)
+                                        redrawviz3();
+                                    });
+                /***************************
+                * Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
+                **************************/
+                //add attributes to the attribute dropdown menu;
+                selectyAttr = d3.select("select#viz3-yattributes");
+
+                // first, put categories in as optgroups
+                Array.from(new Set(dataDict.filter(d => d.sort_order != 0)
+                 .map(d => d.category)))
+                .forEach(function(category) {
+                    selectyAttr.append("optgroup")
+                    .attr("label", category)
+                    .classed("select-y", true);
+                });
+                
+                // now put attributes into the optgroups
+                dataDict.filter(d => d.sort_order != 0)
+                .map(d => ({category : d.category, 
+                    variable_name : d.variable_name,
+                    display_name : d.display_name}))
+                .forEach(function(attrRow, i) {
+                    d3.select("optgroup.select-y[label='" + attrRow.category + "']")
+                    .append("option")
+                    .attr("value", attrRow.variable_name)
+                    .text(attrRow.display_name)
+                    .attr("checked", i==0);
+
+                            // initialize attribute to first row in data dictionary
+                            if(i == 0) {yattribute = attrRow.variable_name;}
+                        });
+                
+                // create listener
+                selectyAttr
+                .on("change", function() {
+                    yattribute = d3.select(this)
+                    .select("option:checked") 
+                                        .attr("value");  // want value (variable_name), not the text (display_name)
+                                        redrawviz3();
+                                    });
+
+                
+                /***************************
+                * Create the viz!-------
+                **************************/
+                makeviz3();
+                redrawviz3();
+                d3.selectAll(".spinner").remove();
+
+            }).catch(function(err) {
+                d3.selectAll(".spinner").remove();
+                console.error('Error: ' + err);
+        })
+    </script>
+</body>
+</html>
+
