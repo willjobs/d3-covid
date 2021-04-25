@@ -643,7 +643,7 @@ function makeViz1c() {
             let closestValueText = closestCountryRow[viz1.selectedAttribute];
 
             if(typeof closestValueText == "number") {
-                closestValueText = (isNaN(closestValueText) ? "No data" : Math.round(1000 * closestValueText) / 1000) ; // round to nearest 3 decimal places
+                closestValueText = (isNaN(closestValueText) ? "No data" : Math.round(1000 * closestValueText) / 1000); // round to nearest 3 decimal places
             } else {
                 closestValueText = (closestValueText == "NA" ? "No data" : closestValueText);
             }

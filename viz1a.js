@@ -243,15 +243,11 @@ function dateStep(viz) {
     }
 }
 
-function redrawViz1All() {
-    redrawViz1a();
-}
-
 function redrawViz1a() {
     const viz1aData = covidData.filter(d => d.date.getTime() == viz1.selectedDate.getTime());
     const varMetadata = dataDict.filter(d => d.variable_name == viz1.selectedAttribute)[0];
+    const attributeName = varMetadata.display_name;
 
-    let attributeName = varMetadata.display_name;
     viz1a.title.text(attributeName + " among countries on " + formatDateLong(viz1.selectedDate));
 
     if(varMetadata.data_type == "ordinal") {
@@ -268,7 +264,7 @@ function redrawViz1a() {
     }
 
     /******
-     * update legend and colors in map
+    * update legend and colors in map
     ******/
     let colorScale;  // this is used to decide which color scale to use for the legend
     let colorPalette;
@@ -340,12 +336,19 @@ function redrawViz1a() {
         .data(viz1aData, function (d) {
             return d ? d.iso_code : d3.select(this).attr("class").match(/(?<=shape-)[A-Z]{3}/)[0];
         }).on("mousemove", function (event, d) {
+            let dataText = d[viz1.selectedAttribute];
+            if(typeof dataText == "number") {
+                dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
+            } else {
+                dataText = (dataText == "NA" ? "No data" : dataText);
+            }
+
             viz1a.tooltip
-                .style("left", event.pageX < 50 ? 0 : event.pageX - 50 + "px")
+                .style("left", (event.pageX < 50 ? 0 : event.pageX - 50) + "px")
                 .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px")
                 .style("display", "inline-block")
                 // Also, don't show NaN or "NA". If no data, write "No data"
-                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + (((typeof d[viz1.selectedAttribute] == "number" && isNaN(d[viz1.selectedAttribute])) || d[viz1.selectedAttribute] == "NA") ? "No data" : d[viz1.selectedAttribute]));
+                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
         }).on("click", function (event, d) {
             let country = d.countryname;
 
@@ -398,13 +401,18 @@ function redrawViz1a() {
         });
 }
 
+function redrawViz1All() {
+    redrawViz1a();
+}
+
 function makeViz1a() {
     viz1.redrawFunc = redrawViz1All; // need this to be able to handle timestep updates
 
     viz1a.tooltip = d3.select("body")
         .append("div")
             .classed("viz1a tooltip", true)
-            .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
+            .style("z-index", 999)  // use z-index to make sure the tooltip shows up above the map
+            .style("pointer-events", "none");  
 
     viz1a.title = d3.select(".viz1a.title span")
         .style("font-size", FONT_SIZES.title + "px")
@@ -433,6 +441,7 @@ function makeViz1a() {
         .setView([40.97989807, 7.734375], 2)
         .setMaxBounds(maxBounds);
 
+    // to use openstreetmap instead:
     //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     //    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     //}).addTo(map);
@@ -464,8 +473,8 @@ function makeViz1a() {
 
 
     /*******************
-     * Add hover events
-     *******************/
+    * Add hover events
+    *******************/
     // these events don't change with data, so we can set them here
     d3.selectAll("#map path[class^='shape-']")
         .on("mouseover", function () {
@@ -508,7 +517,6 @@ Promise.all([
     d3.csv("../data/covid_data.csv", dataRowParser),
     //d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
     d3.json("../data/countries-mapshaper-simplified_v2.json")
-    //d3.csv("../data/covid_oxford+owid_20210414-185830.csv", dataRowParser),
 ]).then(function (files) {
     dataDict = files[0];
     covidData = files[1];
