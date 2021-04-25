@@ -1,5 +1,5 @@
 const FONT_SIZES = {
-    tick: 12,
+    tick: 10,
     axisTitle: 14,
     title: 20,
     markerText: 12,
@@ -308,7 +308,7 @@ function redrawViz1a() {
         } else {
             // if scaling to just today, use the filtered data in viz1aData, otherwise use all data in covidData
             maxValue = d3.max((viz1.scaleMaxToDate ? viz1aData : covidData), d => d[viz1.selectedAttribute]);
-            maxValue = isNaN(maxValue) ? 0 : maxValue;
+            maxValue = maxValue > 0 ? maxValue : 0;
         }
 
         colorScale = d3.scaleSequential(colorPalette).domain([0, maxValue]);
@@ -317,13 +317,15 @@ function redrawViz1a() {
     const legendHeight = varMetadata.data_type == "ordinal" ? (25 * ordinalValues.length) : 50;
 
     d3.selectAll(".viz1a.legend").remove();  // if it already exists, remove it and replace it
-    d3.select("#map")
-        .append("div")  // this ensures it doesn't move with the map when we drag it
-            .classed("viz1a legend", true)
-            .style("position", "relative")
-            .style("z-index", 99999)  // this plus the position:relative makes it appear on top
-            .style("pointer-events", "none")  // this ensures we don't block the mouseovers, clicks, etc
-        .append(() => legend({
+    const mapDiv = d3.select("#map")
+                     .append("div")  // this ensures it doesn't move with the map when we drag it
+                         .classed("viz1a legend", true)
+                         .style("position", "relative")
+                         .style("z-index", 99999)  // this plus the position:relative makes it appear on top
+                         .style("pointer-events", "none");  // this ensures we don't block the mouseovers, clicks, etc
+
+    if(colorScale.domain().length > 0) {
+        mapDiv.append(() => legend({
             color: colorScale,
             title: attributeName,
             width: varMetadata.data_type == "ordinal" ? 25 : 200,
@@ -332,14 +334,17 @@ function redrawViz1a() {
             tickFormat: ".0f"
         }));
 
-    const legendTop = viz1a.svg.attr("height") - 150 - (varMetadata.data_type != "ordinal" ? 
+        const legendTop = viz1a.svg.attr("height") - 150 - (varMetadata.data_type != "ordinal" ? 
                                                             0 : 
                                                             ordinalValues.length * d3.select(".legend rect").attr("height"));
 
-    d3.select("#map .legend svg")
-        .style("position", "relative")
-            .style("top", legendTop)
-            .style("left", 20);
+        d3.select("#map .legend svg")
+            .style("position", "relative")
+                .style("top", legendTop)
+                .style("left", 20);
+    }
+
+    
 
     d3.selectAll("#map .tick text").style("font-size", FONT_SIZES.legendLabel + "px");
     d3.select("#map .legend-title").style("font-size", FONT_SIZES.axisTitle + "px");
@@ -407,11 +412,11 @@ function redrawViz1a() {
             let val;
 
             if(varMetadata.data_type == "ordinal") {
-                val = d[viz1.selectedAttribute] == "NA" ? "0" : d[viz1.selectedAttribute];
+                val = (((d[viz1.selectedAttribute] == "NA") || (d[viz1.selectedAttribute] == "")) ? "0" : d[viz1.selectedAttribute]);
             } else {
-                val = ((isNaN(d[viz1.selectedAttribute]) || (d[viz1.selectedAttribute] < 0)) ? 0 : d[viz1.selectedAttribute]);
+                val = (d[viz1.selectedAttribute] > 0 ? d[viz1.selectedAttribute] : 0);
             }
-            return colorScale(val);
+            return (colorScale.domain().length > 0 ? colorScale(val) : "rgb(255, 255, 229)");
         });
 }
 
@@ -454,7 +459,7 @@ function redrawViz1b() {
     // see if this variable is ordinal; if it is, use its "_numeric" column
     if ((varMetadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => d[attributeData]);
+        let maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
@@ -473,7 +478,7 @@ function redrawViz1b() {
         } else {
             const dataset = (viz1.scaleMaxToDate ? viz1bData : covidData);
             maxValue = d3.max(dataset.filter(d => viz1.selectedCountries.includes(d.countryname)),
-                              d => d[attributeData]);
+                              d => (d[attributeData] > 0 ? d[attributeData] : 0));
         }
 
         viz1b.xScale.domain([0, maxValue]);
@@ -524,7 +529,7 @@ function redrawViz1b() {
             .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
             .attr("y", d => viz1b.yScale(d.countryname))
             .attr("height", viz1b.yScale.bandwidth())
-            .attr("width", d => viz1b.xScale(isNaN(d[attributeData]) || (d[attributeData] < 0) ? 0 : d[attributeData]));
+            .attr("width", d => viz1b.xScale((d[attributeData] > 0 ? d[attributeData] : 0)));
 
     /**********************
     * use "invisible" bars to allow hovering even over very small values
@@ -550,7 +555,7 @@ function redrawViz1b() {
                 if(typeof dataText == "number") {
                     dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
                 } else {
-                    dataText = (dataText == "NA" ? "No data" : dataText);
+                    dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
                 }
                 
                 viz1b.tooltip
@@ -591,8 +596,8 @@ function redrawViz1b() {
             .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
             .attr("y", d => viz1b.yScale(d.countryname) + 0.5 * viz1b.yScale.bandwidth())
             .attr("dy", "0.3em")
-            .style("visibility", d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "visible" : "hidden"))
-            .text(d => (isNaN(d[attributeData]) || d[attributeData] == "NA" ? "No data" : ""));
+            .style("visibility", d => ((isNaN(d[attributeData]) || (d[attributeData] == "NA") || (d[attributeData] == "")) ? "visible" : "hidden"))
+            .text(d => ((isNaN(d[attributeData]) || (d[attributeData] == "NA") || (d[attributeData] == "")) ? "No data" : ""));
 }
 
 function redrawViz1c() {
@@ -627,7 +632,7 @@ function redrawViz1c() {
     // see if this variable is ordinal; if it does, use its "_numeric" column
     if (varMetadata.data_type == "ordinal") {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => d[viz1c.attributeData]);
+        let maxValue = d3.max(covidData, d => (d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
@@ -645,7 +650,7 @@ function redrawViz1c() {
             maxValue = 100.0;
         } else {
             maxValue = d3.max(covidData.filter(d => viz1.selectedCountries.includes(d.countryname)),
-                d => d[viz1c.attributeData]);
+                              d => (d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
         }
 
         viz1c.yScale.domain([0, maxValue]);
@@ -684,7 +689,7 @@ function redrawViz1c() {
     let lineGenerator = d3.line()
         .defined(function (d) { return !isNaN(d[viz1c.attributeData]) })
         .x(d => viz1c.xScale(d.date))
-        .y(d => viz1c.yScale(d[viz1c.attributeData]));
+        .y(d => viz1c.yScale(d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
 
     let lines = viz1c.svg.selectAll(".viz1c.line")
         .data(viz1c.nestedData, d => d[0]);  // use the country name in d[0] as the "key" for merging later
@@ -758,7 +763,7 @@ function redrawViz1c() {
             .style("fill-opacity", 1)
             .attr("y", function(d) {
                 const lastValue = d[1].slice(-1)[0][viz1c.attributeData];
-                return viz1c.yScale((isNaN(lastValue) || (lastValue < 0)) ? 0 : lastValue);
+                return viz1c.yScale(lastValue > 0 ? lastValue : 0);
             });
 }
 
@@ -1158,7 +1163,7 @@ function makeViz1c() {
                 closestCountryRow = d3.filter(data, d => d[0].countryname == viz1c.clicked)[0][0];
             }
 
-            let closestValue = ((isNaN(closestCountryRow[viz1c.attributeData]) || (closestCountryRow[viz1c.attributeData] < 0)) ? 0 : closestCountryRow[viz1c.attributeData]);
+            let closestValue = (closestCountryRow[viz1c.attributeData] > 0 ? closestCountryRow[viz1c.attributeData] : 0);
             let closestValueText = closestCountryRow[viz1.selectedAttribute];
 
             if(typeof closestValueText == "number") {
