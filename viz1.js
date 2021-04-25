@@ -351,7 +351,9 @@ function redrawViz1a() {
     d3.selectAll("#map path[class^='shape-']")
         .data(viz1aData, function (d) {
             return d ? d.iso_code : d3.select(this).attr("class").match(/(?<=shape-)[A-Z]{3}/)[0];
-        }).on("mousemove", function (event, d) {
+        }).on("mouseover", function (event, d) {
+            d3.select(this).classed("hover-country", true);
+
             let dataText = d[viz1.selectedAttribute];
             if(typeof dataText == "number") {
                 dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
@@ -359,12 +361,14 @@ function redrawViz1a() {
                 dataText = (dataText == "NA" ? "No data" : dataText);
             }
 
-            viz1a.tooltip
-                .style("left", (event.pageX < 50 ? 0 : event.pageX - 50) + "px")
-                .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px")
-                .style("display", "inline-block")
-                // Also, don't show NaN or "NA". If no data, write "No data"
-                .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
+            viz1a.tooltip.style("display", "inline-block")
+                         .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
+        }).on("mousemove", function (event, d) {
+            viz1a.tooltip.style("left", (event.pageX < 50 ? 0 : event.pageX - 50) + "px")
+                         .style("top", event.pageY < 70 ? 0 : event.pageY - 70 + "px");
+        }).on("mouseout", function () {
+            d3.select(this).classed("hover-country", false);
+            viz1a.tooltip.style("display", "none");
         }).on("click", function (event, d) {
             let country = d.countryname;
 
@@ -431,8 +435,6 @@ function redrawViz1b() {
     d3.selectAll(".viz1b .y").style("display", axisVisibility);
     d3.selectAll(".viz1b .grid").style("display", axisVisibility);
     d3.selectAll("div.viz1-continents").style("display", axisVisibility);
-
-    //viz1b.title.text(attributeName + " on " + formatDateLong(viz1.selectedDate));
 
     /******
     * update y-axis
@@ -544,23 +546,24 @@ function redrawViz1b() {
             .attr("fill-opacity", "0.05")
             .classed("viz1b bar invisible", true)
         .merge(invisibleBars)
-            .on("mouseover", function () {
+            .on("mouseover", function (event, d) {
                 d3.select(this).classed("hover-bar", true);
-            }).on("mousemove", function (event, d) {
+
                 let dataText = d[viz1.selectedAttribute];
                 if(typeof dataText == "number") {
                     dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
                 } else {
                     dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
                 }
-                
+
                 viz1b.tooltip
-                    .style("left", event.pageX - 50 + "px")
-                    .style("top", event.pageY - 70 + "px")
-                    .style("display", "inline-block")
-                    // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
-                    // Also, don't show NaN or "NA". If no data, write "No data"
-                    .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
+                     .style("display", "inline-block")
+                     // note: display attributeName's value, not attributeData, because we want to see the categorical value, not numeric version
+                     // Also, don't show NaN or "NA". If no data, write "No data"
+                     .html((d.countryname) + "<br><b>" + attributeName + "</b>: " + dataText);
+            }).on("mousemove", function (event, d) {
+                viz1b.tooltip.style("left", event.pageX - 50 + "px")
+                             .style("top", event.pageY - 70 + "px");
             }).on("mouseout", function () {
                 d3.select(this).classed("hover-bar", false);
                 viz1b.tooltip.style("display", "none");
@@ -625,7 +628,7 @@ function redrawViz1c() {
     /******
     * update y-axis (attribute)
     ******/
-    // see if this variable is ordinal; if it does, use its "_numeric" column
+    // see if this variable is ordinal; if it is, use its "_numeric" column
     if (varMetadata.data_type == "ordinal") {
         // get largest value over entire dataset, not just selection
         let maxValue = d3.max(covidData, d => (d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
@@ -772,9 +775,8 @@ function redrawViz1All() {
 function makeViz1a() {
     viz1a.tooltip = d3.select("body")
                       .append("div")
-                          .classed("viz1a tooltip", true)
-                          .style("z-index", 999)  // use z-index to make sure the tooltip shows up above the map
-                          .style("pointer-events", "none");  
+                      .classed("viz1a tooltip", true)
+                      .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
 
     viz1a.title = d3.select(".viz1a.title span")
                     .style("font-size", FONT_SIZES.title + "px")
@@ -834,19 +836,6 @@ function makeViz1a() {
     map.boxZoom.disable();
 
     d3.selectAll("#map path").attr("stroke", null);
-
-
-    /*******************
-    * Add hover events
-    *******************/
-    // these events don't change with data, so we can set them here
-    d3.selectAll("#map path[class^='shape-']")
-        .on("mouseover", function () {
-            d3.select(this).classed("hover-country", true);
-        }).on("mouseout", function () {
-            d3.select(this).classed("hover-country", false);
-            viz1a.tooltip.style("display", "none");
-        });
 
     /*******************
     * add a transparent rectangle over top of the whole SVG so we can click anywhere
@@ -929,12 +918,12 @@ function makeViz1b() {
         .attr("transform", "translate(0," + viz1b.dims.innerHeight + ")");
 
     viz1b.xAxisTicks = d3.axisBottom(viz1b.xScale)
-        .tickSize(-viz1b.dims.innerHeight)
-        .tickFormat("");
+                         .tickSize(-viz1b.dims.innerHeight)
+                         .tickFormat("");
 
     viz1b.tooltip = d3.select("body")
-        .append("div")
-        .classed("viz1b tooltip", true);
+                      .append("div")
+                      .classed("viz1b tooltip", true);
 }
 
 function makeViz1c() {
