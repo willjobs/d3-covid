@@ -26,7 +26,8 @@ function legend({
     marginLeft = 0,
     ticks = width / 64,
     tickFormat,
-    tickValues
+    tickValues,
+    reverseOrdinal
 } = {}) {
 
     let legendType;
@@ -120,7 +121,7 @@ function legend({
     else {
         legendType = "ordinal";
         x = d3.scaleBand()
-            .domain(color.domain())
+            .domain(reverseOrdinal ? color.domain().reverse() : color.domain())
             .rangeRound([height - marginBottom, marginTop]);
 
         svg.append("g")

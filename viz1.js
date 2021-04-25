@@ -1,7 +1,7 @@
 const FONT_SIZES = {
     tick: 12,
     axisTitle: 14,
-    title: 16,
+    title: 20,
     markerText: 12,
     legendLabel: 10,
     lineLabel: 10
@@ -9,7 +9,7 @@ const FONT_SIZES = {
 
 // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
 const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
-    .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
+                          .domain(["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]);
 
 var parseDate = d3.timeParse("%Y-%m-%d");  // for converting strings to dates ("2020-03-31", for example)
 var formatDateLong = d3.timeFormat("%b %e, %Y");  // for converting dates to strings (format is like "Mar 3, 2020")
@@ -429,6 +429,7 @@ function redrawViz1b() {
     d3.selectAll(".viz1b .x").style("display", axisVisibility);
     d3.selectAll(".viz1b .y").style("display", axisVisibility);
     d3.selectAll(".viz1b .grid").style("display", axisVisibility);
+    d3.selectAll("div.viz1-continents").style("display", axisVisibility);
 
     //viz1b.title.text(attributeName + " on " + formatDateLong(viz1.selectedDate));
 
@@ -877,7 +878,7 @@ function makeViz1a() {
 
 function makeViz1b() {
     viz1b.margin = { top: 10, right: 20, bottom: 80, left: 175 };
-    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 15;
+    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 65;
 
     viz1b.dims = {
         //height: 350, width: d3.max([450,  // no smaller than 450px wide
@@ -945,7 +946,7 @@ function makeViz1b() {
 
 function makeViz1c() {
     viz1c.margin = { top: 30, right: 150, bottom: 80, left: 80 };
-    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 25;
+    let vizWidth = d3.min([d3.select("#map svg").attr("width"), window.innerWidth]) / 2 - 75;
 
     viz1c.dims = {
         //height: 350, width: d3.max([400,  // no smaller than 800px wide
@@ -1026,14 +1027,6 @@ function makeViz1c() {
     /***************
     * chart title
     ***************/
-    //viz1c.title = viz1c.svg.append("text")
-    //    .classed("viz1c title", true)
-    //    .attr("x", 0)
-    //    .attr("y", 0)
-    //    .attr("text-anchor", "start")
-    //    .attr("transform", "translate(0, -10)")
-    //    .style("font-size", FONT_SIZES.title + "px");
-
 
     // Save an array of all dates. This is necessary for our special hover effect.
     viz1c.dates = Array.from(
@@ -1209,6 +1202,35 @@ function makeViz1c() {
         });
 }
 
+function makeViz1ContinentLegend() {
+    let margin = { top: 30, right: 0, bottom: 0, left: 0 };
+    let dims = {height: 300, width: 100};
+    dims["innerHeight"] = dims.height - margin.top - margin.bottom
+    dims["innerWidth"] = dims.width - margin.left - margin.right
+
+    let svg = d3.select("div.viz1-continents")
+            .append("svg")
+                .attr("width", dims.width)
+                .attr("height", dims.height)
+                .attr("viewBox", `0 0 ${dims.width} ${dims.height}`)
+                .attr("preserveAspectRatio", "xMinYMin")
+                .classed("viz1", true)
+            .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append(() => legend({
+                color: continentColors,
+                title: "Continents",
+                width: 25,
+                height: (25 * continentColors.domain().length),
+                ticks: 4,
+                tickFormat: ".0f",
+                reverseOrdinal: true
+            }));
+    
+    d3.select("div.viz1-continents").style("display", "none");
+}
+
 Promise.all([
     d3.csv("../data/data_dictionary.csv", dictRowParser),
     //d3.csv("../data/covid_data.csv", dataRowParser),
@@ -1310,6 +1332,7 @@ Promise.all([
     makeViz1a();
     makeViz1b();
     makeViz1c();
+    makeViz1ContinentLegend();
 
     viz1.redrawFunc = redrawViz1All; // need this to be able to handle timestep updates
     dateUpdate(viz1, viz1.selectedDate);  // this will kick off all the redraws
