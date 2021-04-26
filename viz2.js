@@ -200,7 +200,7 @@ function redrawViz2() {
     // create a "nested" structure to allow us to draw one line per country
     // see https://stackoverflow.com/a/35279106/1102199
     // "d3.nest()" is deprecated; see https://github.com/d3/d3-array/blob/master/README.md#group
-    nestedData = d3.group(viz2Data, d => d.countryname);
+    const nestedData = d3.group(viz2Data, d => d.countryname);
 
     let lineGenerator = d3.line()
                             .defined(function(d) {return !isNaN(d[attributeData])})
@@ -328,7 +328,6 @@ function makeViz2() {
     viz2.dims["innerHeight"] = viz2.dims.height - viz2.margin.top - viz2.margin.bottom
     viz2.dims["innerWidth"] = viz2.dims.width - viz2.margin.left - viz2.margin.right
 
-    console.log(viz2.margin.left);
     d3.select("div.viz2-table").style("margin-left", (viz2.margin.left - 5) + "px");
 
     /***************
