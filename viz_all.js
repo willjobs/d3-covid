@@ -5,7 +5,7 @@ const FONT_SIZES = {
     markerText: 12,
     legendLabel: 10,
     lineLabel: 10
-}
+};
 
 // color scale is here: https://github.com/d3/d3-scale-chromatic#schemeTableau10
 const continentColors = d3.scaleOrdinal(d3.schemeTableau10)
@@ -21,10 +21,11 @@ var formatMonthYear = function (d) {
     } else {
         return d3.timeFormat("%b")(d);
     }
-}
+};
 
 var covidData;
 var dataDict;
+var geomData;
 
 // these properties apply to all 3 parts of viz1
 var viz1 = {
@@ -32,7 +33,7 @@ var viz1 = {
     scaleMaxToDate: false,  // if false, set scales' maxes to the max over whole timeframe; if true, set max to just values observed on selected date
     quantileColor: false,    // if true, use scaleSequentialQuantile for colors; if false, use scaleSequential
     shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
-}
+};
 
 // these are specific to viz 1a, 1b, and 1c
 var viz1a = {};  
@@ -211,7 +212,7 @@ function makeDateSlider(viz, cssLocation) {
         
     // make the years in the scale bold face
     d3.selectAll(cssLocation + " .date-ticks text")
-        .style("font-weight", function(d) {return (isNaN(1*formatMonthYear(d)) ? "normal" : "bolder")});
+        .style("font-weight", function(d) {return (isNaN(1*formatMonthYear(d)) ? "normal" : "bolder");});
 
 
     viz.dateHandle = viz.svgSlider.insert("circle", ".date-slider.track-overlay")
@@ -282,9 +283,9 @@ function redrawViz1a() {
         viz1.scaleMaxToDate = false;
         d3.select("input[name='viz1-scale-checkbox']").property("checked", false);
 
-        d3.selectAll(".viz1.checkbox-container").style("display","none")
+        d3.selectAll(".viz1.checkbox-container").style("display","none");
     } else {
-        d3.selectAll(".viz1.checkbox-container").style("display","inline-block")
+        d3.selectAll(".viz1.checkbox-container").style("display","inline-block");
     }
 
     /******
@@ -464,9 +465,11 @@ function redrawViz1b() {
     * update x-axis
     ******/
     // see if this variable is ordinal; if it is, use its "_numeric" column
+    let maxValue;
+
     if ((varMetadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
+        maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
@@ -530,7 +533,7 @@ function redrawViz1b() {
         .append("rect")
             .attr("fill", d => continentColors(d.continent))
             .classed("viz1b bar data", true)
-            .attr("id", function (d, i) { return "viz1b-bar" + i })
+            .attr("id", function (d, i) { return "viz1b-bar" + i; })
         .merge(bars)
             .transition()
             .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
@@ -598,7 +601,7 @@ function redrawViz1b() {
     noData.enter()
         .append("text")
             .classed("viz1b no-data", true)
-            .attr("id", function (d, i) { return "viz1b-nodata" + i })
+            .attr("id", function (d, i) { return "viz1b-nodata" + i; })
         .merge(noData)
             .transition()
             .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
@@ -635,9 +638,11 @@ function redrawViz1c() {
     * update y-axis (attribute)
     ******/
     // see if this variable is ordinal; if it is, use its "_numeric" column
+    let maxValue;
+
     if (varMetadata.data_type == "ordinal") {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => (d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
+        maxValue = d3.max(covidData, d => (d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
@@ -692,7 +697,7 @@ function redrawViz1c() {
     viz1c.nestedData = d3.groups(viz1cData, d => d.countryname);
 
     let lineGenerator = d3.line()
-        .defined(function (d) { return !isNaN(d[viz1c.attributeData]) })
+        .defined(function (d) { return !isNaN(d[viz1c.attributeData]); })
         .x(d => viz1c.xScale(d.date))
         .y(d => viz1c.yScale(d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
 
@@ -727,7 +732,7 @@ function redrawViz1c() {
             .attr("fill", "none")
         .merge(lines)
             .attr("stroke", function (d) {
-                color = continentColors(d[1][0].continent);
+                const color = continentColors(d[1][0].continent);
 
                 if (viz1c.clicked) {
                     if (d[1][0].countryname == viz1c.clicked) {
@@ -751,7 +756,7 @@ function redrawViz1c() {
             .text(d => d[0])    
             .attr("x", viz1c.dims.innerWidth + 5)
             .attr("stroke", function (d) {
-                color = continentColors(d[1][0].continent);
+                const color = continentColors(d[1][0].continent);
 
                 if (viz1c.clicked) {
                     if (d[1][0].countryname == viz1c.clicked) {
@@ -795,10 +800,11 @@ function redrawViz2() {
      * update y-axis (attribute)
     ******/
     // see if this variable is ordinal; if it is, use its "_numeric" column
+    let maxValue;
 
     if((var_metadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
+        maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
         let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
@@ -851,7 +857,7 @@ function redrawViz2() {
     const nestedData = d3.group(viz2Data, d => d.countryname);
 
     let lineGenerator = d3.line()
-                            .defined(function(d) {return !isNaN(d[attributeData])})
+                            .defined(function(d) {return !isNaN(d[attributeData]);})
                             .x(d => viz2.xScale(d.date))
                             .y(d => viz2.yScale(d[attributeData] > 0 ? d[attributeData] : 0));
 
@@ -906,7 +912,7 @@ function redrawViz2() {
     /************
      * Create the table
     ************/
-    if(viz2Data.length == 0) {return}
+    if(viz2Data.length == 0) {return;}
 
     const categoryAttributes = dataDict.filter(d => d.category == viz2.selectedCategory);
     const viz2TableData = viz2Data.filter(d => d.date.getTime() == maxDate);  // table only shows latest data
@@ -948,7 +954,7 @@ function redrawViz2() {
         const attributeMap = viz2TableData.reduce(
             function(map, obj) {
                 map[obj.countryname] = obj[attribute.variable_name]; 
-                return map
+                return map;
         }, {});
 
         // add each country's value, in order of appearance
@@ -973,7 +979,7 @@ function redrawViz3() {
     const varMetadata = {
         'x': dataDict.filter(d => d.variable_name == viz3.selectedXAttribute)[0], 
         'y': dataDict.filter(d => d.variable_name == viz3.selectedYAttribute)[0]
-    }
+    };
 
     // Note: if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
     const attributeNames = {
@@ -981,7 +987,7 @@ function redrawViz3() {
               'data': (varMetadata.x.data_type == "ordinal" ? varMetadata.x.numeric_column : viz3.selectedXAttribute)},
         'y': {'name': varMetadata.y.display_name,
               'data': (varMetadata.y.data_type == "ordinal" ? varMetadata.y.numeric_column : viz3.selectedYAttribute)}
-    }
+    };
 
     // in case we removed all the data, don't show any axes or gridlines
     let axis_visibility = viz3Data.length == 0 ? "none" : "inherit";
@@ -1007,9 +1013,11 @@ function redrawViz3() {
         }
 
         // see if this variable is ordinal; if it is, use its "_numeric" column
+        let maxValue;
+
         if((varMetadata[xOrY].data_type == "ordinal")) {
             // get largest value over entire dataset, not just selection
-            let maxValue = d3.max(covidData, d => (d[attributeNames[xOrY].data] > 0 ? d[attributeNames[xOrY].data] : 0));
+            maxValue = d3.max(covidData, d => (d[attributeNames[xOrY].data] > 0 ? d[attributeNames[xOrY].data] : 0));
             let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
             // set tick values to exactly these values
@@ -1051,7 +1059,7 @@ function redrawViz3() {
         d3.select(`.viz3.${xOrY}.grid`)
             .call(axisTicks);
 
-    }
+    };
     
     updateAxis("x");
     updateAxis("y");
@@ -1070,8 +1078,8 @@ function redrawViz3() {
     /************************
     * Create the actual points on the plot
     ************************/
-    dots = viz3.svg.selectAll("circle.dot")
-                .data(viz3Data, d => d.countryname);
+    const dots = viz3.svg.selectAll("circle.dot")
+                    .data(viz3Data, d => d.countryname);
 
     dots.exit()
         .transition()
@@ -1095,7 +1103,7 @@ function redrawViz3() {
                         }
 
                         return dataText;
-                    }
+                    };
 
                     d3.select(this).classed("hover-point", true);
                     viz3.tooltip.style("display", "inline-block")
@@ -1126,11 +1134,11 @@ function makeViz1a() {
                     .style("font-weight", "bold");
 
     // get unique iso_codes
-    covidISOCodes = Array.from(new Set(covidData.map(d => d.iso_code)));
-    geomISOCodes = geomData.features.map(d => d.properties.ISO_A3);
+    let covidISOCodes = Array.from(new Set(covidData.map(d => d.iso_code)));
+    let geomISOCodes = geomData.features.map(d => d.properties.ISO_A3);
 
-    commonISOCodes = geomISOCodes.filter(d => covidISOCodes.includes(d));
-    geomMissingISOCodes = geomISOCodes.filter(d => !covidISOCodes.includes(d));
+    let commonISOCodes = geomISOCodes.filter(d => covidISOCodes.includes(d));
+    //let geomMissingISOCodes = geomISOCodes.filter(d => !covidISOCodes.includes(d));
 
 
     /***************************
@@ -1138,15 +1146,15 @@ function makeViz1a() {
     * geojson from https://datahub.io/core/geo-countries
     * converted to topojson (for compression) using https://mapshaper.org/
     **************************/
-    const northeastCorner = L.latLng(84.4, 181)
-    const southwestCorner = L.latLng(-58, -180)
+    const northeastCorner = L.latLng(84.4, 181);
+    const southwestCorner = L.latLng(-58, -180);
     const maxBounds = L.latLngBounds(northeastCorner, southwestCorner);
 
     // ([center_x, center_y], zoom_level). I determined this center manually by dragging the map
     // around and checking map.getCenter(). Zoom levels are integers; you can get the current value with map.getZoom().
-    map = new L.Map("map")
-               .setView([40.97989807, 7.734375], 2)
-               .setMaxBounds(maxBounds);
+    const map = new L.Map("map")
+                     .setView([40.97989807, 7.734375], 2)
+                     .setMaxBounds(maxBounds);
 
     // to use openstreetmap instead:
     //L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -1170,8 +1178,8 @@ function makeViz1a() {
             className: commonISOCodes.includes(feature.properties.ISO_A3) ? "shape-" + feature.properties.ISO_A3 : null,
             fillColor: commonISOCodes.includes(feature.properties.ISO_A3) ? "blue" : "#eee",
             fillOpacity: commonISOCodes.includes(feature.properties.ISO_A3) ? 1.0 : 0.1
-        }
-    }
+        };
+    };
 
     L.geoJson(geomData, { style: styleLeafletPaths })
         .addTo(map);
@@ -1219,8 +1227,8 @@ function makeViz1b() {
         //        Math.floor(window.innerWidth / 2)])])
         height: 300, width: vizWidth
     };
-    viz1b.dims["innerHeight"] = viz1b.dims.height - viz1b.margin.top - viz1b.margin.bottom
-    viz1b.dims["innerWidth"] = viz1b.dims.width - viz1b.margin.left - viz1b.margin.right
+    viz1b.dims.innerHeight = viz1b.dims.height - viz1b.margin.top - viz1b.margin.bottom;
+    viz1b.dims.innerWidth = viz1b.dims.width - viz1b.margin.left - viz1b.margin.right;
 
     viz1b.svg = d3.select("div.viz1b")
                   .append("svg")
@@ -1276,8 +1284,8 @@ function makeViz1c() {
     viz1c.dims = {
         height: 300, width: vizWidth
     };
-    viz1c.dims["innerHeight"] = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom
-    viz1c.dims["innerWidth"] = viz1c.dims.width - viz1c.margin.left - viz1c.margin.right
+    viz1c.dims.innerHeight = viz1c.dims.height - viz1c.margin.top - viz1c.margin.bottom;
+    viz1c.dims.innerWidth = viz1c.dims.width - viz1c.margin.left - viz1c.margin.right;
 
     viz1c.svg = d3.select("div.viz1c")
                   .append("svg")
@@ -1320,7 +1328,7 @@ function makeViz1c() {
         .call(viz1c.xAxis);
 
     d3.selectAll(".viz1c.x.axis .tick text")
-        .style("font-weight", function(d) {return (isNaN(1*formatMonthYear(d)) ? "normal" : "bolder")});
+        .style("font-weight", function(d) {return (isNaN(1*formatMonthYear(d)) ? "normal" : "bolder");});
     /***************
     * x-axis gridlines
     * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
@@ -1527,8 +1535,8 @@ function makeViz1c() {
 function makeViz1ContinentLegend() {
     let margin = { top: 30, right: 0, bottom: 0, left: 0 };
     let dims = {height: 300, width: 100};
-    dims["innerHeight"] = dims.height - margin.top - margin.bottom
-    dims["innerWidth"] = dims.width - margin.left - margin.right
+    dims.innerHeight = dims.height - margin.top - margin.bottom;
+    dims.innerWidth = dims.width - margin.left - margin.right;
 
     let svg = d3.select("div.viz1-continents")
                 .append("svg")
@@ -1558,8 +1566,8 @@ function makeViz2() {
 
     viz2.dims = {height: 400, width: 700};
 
-    viz2.dims["innerHeight"] = viz2.dims.height - viz2.margin.top - viz2.margin.bottom
-    viz2.dims["innerWidth"] = viz2.dims.width - viz2.margin.left - viz2.margin.right
+    viz2.dims.innerHeight = viz2.dims.height - viz2.margin.top - viz2.margin.bottom;
+    viz2.dims.innerWidth = viz2.dims.width - viz2.margin.left - viz2.margin.right;
 
     /***************
      *  Create svg
@@ -1621,7 +1629,7 @@ function makeViz2() {
     //rotate x-axis ticks
     d3.selectAll('.viz2.x.axis .tick text')
         .attr("transform","rotate(-45)")
-        .attr("text-anchor","end")
+        .attr("text-anchor","end");
 
     /***************
      * y-axis gridlines
@@ -1657,8 +1665,8 @@ function makeViz2() {
 function makeViz2ContinentLegend() {
     let margin = { top: 30, right: 0, bottom: 0, left: 0 };
     let dims = {height: 300, width: 100};
-    dims["innerHeight"] = dims.height - margin.top - margin.bottom
-    dims["innerWidth"] = dims.width - margin.left - margin.right
+    dims.innerHeight = dims.height - margin.top - margin.bottom;
+    dims.innerWidth = dims.width - margin.left - margin.right;
 
     let svg = d3.select("div.viz2-continents")
                 .append("svg")
@@ -1685,8 +1693,8 @@ function makeViz3() {
     viz3.margin = {top: 20, right: 150, bottom: 90, left: 150};
 
     viz3.dims = {height: 400, width: 600};
-    viz3.dims["innerHeight"] = viz3.dims.height - viz3.margin.top - viz3.margin.bottom
-    viz3.dims["innerWidth"] = viz3.dims.width - viz3.margin.left - viz3.margin.right
+    viz3.dims.innerHeight = viz3.dims.height - viz3.margin.top - viz3.margin.bottom;
+    viz3.dims.innerWidth = viz3.dims.width - viz3.margin.left - viz3.margin.right;
 
     viz3.svg = d3.select("div.viz3")
                  .append("svg")
@@ -1807,7 +1815,7 @@ Promise.all([
     * Viz 1: Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
     **************************/
     //add attributes to the attribute dropdown menu;
-    selectAttr = d3.select("select#viz1-attributes");
+    let selectAttr = d3.select("select#viz1-attributes");
 
     // first, put categories in as optgroups
     Array.from(new Set(dataDict.filter(d => d.sort_order != 0)
@@ -1862,7 +1870,7 @@ Promise.all([
 
         redrawViz1a();
         redrawViz1b(); // this checkbox doesn't affect viz 1c
-    })
+    });
 
     /***************************
     * Viz 1: Checkbox for determining how the max is set on scales.
@@ -1880,12 +1888,12 @@ Promise.all([
         }
 
         redrawViz1a();  // this checkbox doesn't affect viz1b or viz1c
-    })
+    });
 
     /***************************
     * Viz 2: Countries select list. Add countries to select list and set up "change" listener to redraw
     **************************/
-    selectCountry = d3.select("select#viz2-countries");
+    let selectCountry = d3.select("select#viz2-countries");
 
     // get unique countries, then append <option> to <select>
     Array.from(new Set(covidData.map(d => d.countryname)))
@@ -1900,7 +1908,7 @@ Promise.all([
     const initialCountries = ["Russia", "New Zealand", "Ethiopia"];
 
     d3.selectAll("select#viz2-countries option")
-        .filter(function() {return initialCountries.includes(d3.select(this).text())})
+        .filter(function() {return initialCountries.includes(d3.select(this).text());})
         .attr("selected", "selected");
 
     viz2.selectedCountries = initialCountries;
@@ -1911,7 +1919,7 @@ Promise.all([
 
         d3.select(this)
           .selectAll("option:checked")
-          .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
+          .each(function() { countries.push(this.value); }); // for each select country, get its value (name)
 
         // want to maintain ordering of original selection
         viz2.selectedCountries = viz2.selectedCountries.filter(d => countries.includes(d));
@@ -1925,7 +1933,7 @@ Promise.all([
     * Viz 2: 1st dropdown: Category
     **************************/
     // add attributes to the attribute dropdown menu;
-    selectCat = d3.select("select#viz2-categories");
+    let selectCat = d3.select("select#viz2-categories");
     selectAttr = d3.select("select#viz2-attributes");
 
     // get unique categories, then append <option> to <select>
@@ -1950,7 +1958,7 @@ Promise.all([
                         .text(attribute.display_name)
                         .property("checked", i == 0);
                 });
-    }
+    };
 
     // create listener
     selectCat.on("change", function() {
@@ -2005,7 +2013,7 @@ Promise.all([
 
         d3.select(this)
           .selectAll("option:checked") 
-          .each(function() { countries.push(this.value) }); // for each select country, get its value (name)
+          .each(function() { countries.push(this.value); }); // for each select country, get its value (name)
 
         // want to maintain ordering of original selection
         viz3.selectedCountries = viz3.selectedCountries.filter(d => countries.includes(d));
@@ -2046,11 +2054,11 @@ Promise.all([
         
         // initialize with x dropdown = "New cases" and y dropdown = "School closing"
         d3.selectAll("select#viz3-xattributes option")
-            .filter(function() {return (d3.select(this).text() == "New cases")})
+            .filter(function() {return (d3.select(this).text() == "New cases");})
             .attr("selected", "selected");
 
         d3.selectAll("select#viz3-yattributes option")
-            .filter(function() {return (d3.select(this).text() == "School closing")})
+            .filter(function() {return (d3.select(this).text() == "School closing");})
             .attr("selected", "selected");
         
         // create listener
@@ -2066,7 +2074,7 @@ Promise.all([
             }
             redrawViz3();
         });
-    }
+    };
 
     makeAttributeDropdown("x");
     makeAttributeDropdown("y");
