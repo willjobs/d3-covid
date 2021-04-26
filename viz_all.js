@@ -305,7 +305,7 @@ function redrawViz1a() {
 
     if (varMetadata.data_type == "ordinal") {
         // get possible values, using the text version of attribute (1-Local, 1-National, etc.)
-        ordinalValues = Array.from(new Set(covidData.map(d => (((d[viz1.selectedAttribute] == "NA") || (d[viz1.selectedAttribute] == "")) ? "0" : d[viz1.selectedAttribute]) ))).sort();
+        ordinalValues = Array.from(new Set(covidData.map(d => (((d[viz1.selectedAttribute] === "NA") || (d[viz1.selectedAttribute] === "")) ? "0" : d[viz1.selectedAttribute]) ))).sort();
         colorScale = d3.scaleOrdinal(colorPalette[ordinalValues.length]).domain(ordinalValues);  // note: the max # of colors for this color scale is 9
     } else if (viz1.quantileColor) {
         colorScale = d3.scaleSequentialQuantile(colorPalette)
@@ -422,7 +422,7 @@ function redrawViz1a() {
             let val;
 
             if(varMetadata.data_type == "ordinal") {
-                val = (((d[viz1.selectedAttribute] == "NA") || (d[viz1.selectedAttribute] == "")) ? "0" : d[viz1.selectedAttribute]);
+                val = (((d[viz1.selectedAttribute] === "NA") || (d[viz1.selectedAttribute] === "")) ? "0" : d[viz1.selectedAttribute]);
             } else {
                 val = (d[viz1.selectedAttribute] > 0 ? d[viz1.selectedAttribute] : 0);
             }
@@ -565,7 +565,7 @@ function redrawViz1b() {
                 if(typeof dataText == "number") {
                     dataText = (isNaN(dataText) ? "No data" : (Math.round(1000 * dataText) / 1000).toLocaleString());  // round to 3 digits
                 } else {
-                    dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
+                    dataText = (((dataText === "NA") || (dataText === "")) ? "No data" : dataText);
                 }
 
                 viz1b.tooltip
@@ -607,8 +607,8 @@ function redrawViz1b() {
             .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 500)
             .attr("y", d => viz1b.yScale(d.countryname) + 0.5 * viz1b.yScale.bandwidth())
             .attr("dy", "0.3em")
-            .style("visibility", d => ((isNaN(d[attributeData]) || (d[attributeData] == "NA") || (d[attributeData] == "")) ? "visible" : "hidden"))
-            .text(d => ((isNaN(d[attributeData]) || (d[attributeData] == "NA") || (d[attributeData] == "")) ? "No data" : ""));
+            .style("visibility", d => ((isNaN(d[attributeData]) || (d[attributeData] === "NA") || (d[attributeData] === "")) ? "visible" : "hidden"))
+            .text(d => ((isNaN(d[attributeData]) || (d[attributeData] === "NA") || (d[attributeData] === "")) ? "No data" : ""));
 }
 
 function redrawViz1c() {
@@ -964,7 +964,7 @@ function redrawViz2() {
             if(typeof valText == "number") {
                 valText = (isNaN(valText) ? "No data" : (Math.round(1000 * valText) / 1000).toLocaleString()); // round to nearest 3 decimal places
             } else {
-                valText = (((valText == "NA") || (valText == "")) ? "No data" : valText);
+                valText = (((valText === "NA") || (valText === "")) ? "No data" : valText);
             }
 
             tr.append("td").text(valText);
@@ -1099,7 +1099,7 @@ function redrawViz3() {
                         if(typeof dataText == "number") {
                             dataText = (isNaN(dataText) ? "No data" : (Math.round(1000 * dataText) / 1000).toLocaleString());  // round to 3 digits
                         } else {
-                            dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
+                            dataText = (((dataText === "NA") || (dataText === "")) ? "No data" : dataText);
                         }
 
                         return dataText;
