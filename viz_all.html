@@ -13,8 +13,18 @@
     <script type="text/javascript" src="legend.js"></script>
 </head>
 <body>
-    <div class="spinner"></div>
+    <div id="introduction">
+        <h1>Worldwide Trends in Covid-19</h1>
+        <p>This series of visualizations helps illustrate trends in Covid-19 since January 1, 2020. It helps users gain an understanding of the trajectory of the virus (in terms of cases, deaths, hospitalizations, etc.) as well as society's response to and handling of the crisis. Users are also able to draw relationships between a society's policies and its Covid-19 outcomes.</p>
+        <p>There are two data sources for this project:</p>
+        <ul>
+            <li>The <a href="https://www.bsg.ox.ac.uk/research/research-projects/covid-19-government-response-tracker"><em>Oxford COVID-19 Government Response Tracker (OxCGRT)</em></a>, created by the Blavatnik School of Government at the University of Oxford. This dataset provided information on government policies amidst the pandemic</li>
+            <li>The <a href="https://github.com/owid/covid-19-data/tree/master/public/data"><em>Our World in Data Covid-19 Dataset</em></a>, created by the organization <a href="https://ourworldindata.org">Our World in Data</a>. This dataset provided information on daily and cumulative cases, deaths, hospitalized patients, ICU patients, tests, and vaccines administered. It also includes data on the economy, some health characteristics (e.g., prevalence of diabetes and smoking), and the country’s level of development</li>
+        </ul>
+        <p><a href="#definitions">Definitions</a> of all of the attributes are given at the bottom of the page. Note that, for ordinal variables, in cases where policies vary within a country (e.g., mask-mandates, etc.), the strictest value is chosen, combined with the suffix "-Local". Nation-wide policies have the suffix "-National".</p>
+    </div>
 
+    <div class="spinner"></div>
     <div id="viz1-container" class="container" style="margin-left:-9999px">
         <label for="viz1-attributes">Attribute: </label>
         <select name="viz1-attributes" id="viz1-attributes"></select>
@@ -84,6 +94,208 @@
 
         <div class="viz3"></div>
     </div>
+
+    <div id="definitions">
+        <h1>Definitions of attributes used above</h1>
+        <p>The following attributes and their definitions come from the data sources cited in the introduction at the top of the page. As mentioned above, for ordinal variables, in cases where policies vary within a country (e.g., mask-mandates, etc.), the strictest value is chosen, combined with the suffix "-Local". Nation-wide policies have the suffix "-National".</p>
+        <h3>Cases & Deaths</h3>
+        <ul>
+            <li><strong>New cases: </strong>New confirmed cases of COVID-19 (Source: OWID)</li>
+            <li><strong>New cases, per million: </strong>New confirmed cases of COVID-19 per 1,000,000 people (Source: OWID)</li>
+            <li><strong>Total cases: </strong>Total (cumulative) confirmed cases of COVID-19 (Source: OWID)</li>
+            <li><strong>Total cases, per million: </strong>Total (cumulative) confirmed cases of COVID-19 per 1,000,000 people (Source: OWID)</li>
+            <li><strong>New deaths: </strong>New deaths attributed to COVID-19 (Source: OWID)</li>
+            <li><strong>New deaths, per million: </strong>New deaths attributed to COVID-19 per 1,000,000 people (Source: OWID)</li>
+            <li><strong>Total deaths: </strong>Total deaths attributed to COVID-19 (Source: OWID)</li>
+            <li><strong>Total deaths, per million: </strong>Total deaths attributed to COVID-19 per 1,000,000 people (Source: OWID)</li>
+        </ul>
+        <h3>Tests</h3>
+        <ul>
+            <li><strong>New tests: </strong>New tests for COVID-19 (only calculated for consecutive days) (Source: OWID)</li>
+            <li><strong>New tests, per thousand: </strong>New tests for COVID-19 per 1,000 people (Source: OWID)</li>
+            <li><strong>Total tests: </strong>Total tests for COVID-19 (Source: OWID)</li>
+            <li><strong>Total tests, per thousand: </strong>Total tests for COVID-19 per 1,000 people (Source: OWID)</li>
+            <li><strong>Positive rate: </strong>The share of COVID-19 tests that are positive, given as a rolling 7-day average (Source: OWID)</li>
+            <li><strong>Reproduction rate (R0): </strong>Real-time estimate of the effective reproduction rate (R) of COVID-19 (Source: OWID)</li>
+        </ul>
+        <h3>Vaccinations</h3>
+        <ul>
+            <li><strong>New vaccinations: </strong>New COVID-19 vaccination doses administered (only calculated for consecutive days) (Source: OWID)</li>
+            <li><strong>New vaccinations, per hundred: </strong>Calculated using "New vaccinations" and "Population" (Source: OWID)</li>
+            <li><strong>People vaccinated: </strong>Total number of people who received at least one vaccine dose (Source: OWID)</li>
+            <li><strong>People vaccinated, per hundred: </strong>Total number of people who received at least one vaccine dose per 100 people in the total population (Source: OWID)</li>
+            <li><strong>People fully vaccinated: </strong>Total number of people who received all doses prescribed by the vaccination protocol (Source: OWID)</li>
+            <li><strong>People fully vaccinated, per hundred: </strong>Total number of people who received all doses prescribed by the vaccination protocol per 100 people in the total population (Source: OWID)</li>
+        </ul>
+        <h3>Hospitals</h3>
+        <ul>
+            <li><strong>ICU patients: </strong>Number of COVID-19 patients in intensive care units (ICUs) on a given day (Source: OWID)</li>
+            <li><strong>ICU patients, per million: </strong>Number of COVID-19 patients in intensive care units (ICUs) on a given day per 1,000,000 people (Source: OWID)</li>
+            <li><strong>ICU admissions (weekly): </strong>Number of COVID-19 patients newly admitted to intensive care units (ICUs) in a given week (Source: OWID)</li>
+            <li><strong>ICU admissions (weekly), per million: </strong>Number of COVID-19 patients newly admitted to intensive care units (ICUs) in a given week per 1,000,000 people (Source: OWID)</li>
+            <li><strong>Hospitalized patients: </strong>Number of COVID-19 patients in hospital on a given day (Source: OWID)</li>
+            <li><strong>Hospitalized patients, per million: </strong>Number of COVID-19 patients in hospital on a given day per 1,000,000 people (Source: OWID)</li>
+            <li><strong>Hospital admissions (weekly): </strong>Number of COVID-19 patients newly admitted to hospitals in a given week (Source: OWID)</li>
+            <li><strong>Hospital admissions (weekly), per million: </strong>Number of COVID-19 patients newly admitted to hospitals in a given week per 1,000,000 people (Source: OWID)</li>
+        </ul>
+        <h3>Aggregate Indices</h3>
+        <ul>
+            <li><strong>Containment health index: </strong>A composite measure based on 13 containment and health indicators, including including school closures, workplace closures, travel bans, testing policy, contact tracing, face coverings, and vaccine policy. It was rescaled from 0 to 100 (100 = most support). (Source: OxCGRT)</li>
+            <li><strong>Economic support index: </strong>A composite measure based on two economic indicators: income support and debt/contract relief. It was rescaled from 0 to 100 (100 = most support). (Source: OxCGRT)</li>
+            <li><strong>Government response index: </strong>Composite measure of 16 response variables, scaled from 0 to 100 (100 = largest response). For policies that vary within a country, the largest value is shown. Includes variables on containment, economic stimulus, and health policies. (Source: OxCGRT)</li>
+            <li><strong>Stringency index: </strong>Composite measure of 9 response variables, including school closures, workplace closures, and travel bans. It is scaled from 0 to 100 (100 = largest response). For policies that vary within a country, the largest value is shown. (Source: OxCGRT)</li>
+        </ul>
+
+        <h3>Containment Policies</h3>
+        <ul>
+            <li><strong>Cancel public events: </strong>Record cancelling public events. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend cancelling</li>
+                    <li>2 - require cancelling</li>
+                </ul>
+            </li>
+            <li><strong>Close public transport: </strong>Record closing of public transport. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend closing (or significantly reduce volume/route/means of transport available)</li>
+                    <li>2 - require closing (or prohibit most citizens from using it)</li>
+                </ul>
+            </li>
+            <li><strong>International travel controls: </strong>Record restrictions on international travel. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no restrictions</li>
+                    <li>1 - screening arrivals</li>
+                    <li>2 - quarantine arrivals from some or all regions</li>
+                    <li>3 - ban arrivals from some regions</li>
+                    <li>4 - ban on all regions or total border closure</li>
+                </ul>
+            </li>
+            <li><strong>Restrictions on gatherings: </strong>Record limits on gatherings. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no restrictions</li>
+                    <li>1 - restrictions on very large gatherings (the limit is above 1000 people)</li>
+                    <li>2 - restrictions on gatherings between 101-1000 people</li>
+                    <li>3 - restrictions on gatherings between 11-100 people</li>
+                    <li>4 - restrictions on gatherings of 10 people or less</li>
+                </ul>
+            </li>
+            <li><strong>Restrictions on movement: </strong>Record restrictions on internal movement between. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend not to travel between regions/cities</li>
+                    <li>2 - internal movement restrictions in place</li>
+                </ul>
+            </li>
+            <li><strong>School closing: </strong>Record closings of schools and universities. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend closing or all schools open with alterations resulting in significant differences compared to non-Covid-19 operations</li>
+                    <li>2 - require closing (only some levels or categories, eg just high school, or just public schools)</li>
+                    <li>3 - require closing all levels</li>
+                </ul>
+            </li>
+            <li><strong>Stay at home requirements: </strong>Record orders to "shelter-in-place" and otherwise confine to the home. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend not leaving house</li>
+                    <li>2 - require not leaving house with exceptions for daily exercise, grocery shopping, and 'essential' trips</li>
+                    <li>3 - require not leaving house with minimal exceptions (eg allowed to leave once a week, or only one person can leave at a time, etc). (Source: OxCGRT)</li>
+                </ul>
+            </li>
+            <li><strong>Workplace closing: </strong>Record closings of workplaces. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no measures</li>
+                    <li>1 - recommend closing (or recommend work from home)</li>
+                    <li>2 - require closing (or work from home) for some sectors or categories of workers</li>
+                    <li>3 - require closing (or work from home) for all-but-essential workplaces (eg grocery stores, doctors)</li>
+                </ul>
+            </li>
+        </ul>
+        <h3>Economic Policies</h3>
+        <ul>
+            <li><strong>Debt contract relief: </strong>Record if the government is freezing financial obligations for households (eg stopping loan repayments, preventing services like water from stopping, or banning evictions). (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no debt/contract relief</li>
+                    <li>1 - narrow relief, specific to one kind of contract</li>
+                    <li>2 - broad debt/contract relief</li>
+                </ul>
+            </li>
+            <li><strong>Fiscal measures: </strong>Announced economic stimulus spending (additional to previously announced amounts). Record monetary value in USD of fiscal stimuli, includes any spending or tax cuts NOT included in "International support", "Emergency investment in healthcare", or "Investment in vaccines". (Source: OxCGRT)</li>
+            <li><strong>Income support: </strong>Record if the government is providing direct cash payments to people who lose their jobs or cannot work. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no income support</li>
+                    <li>1 - government is replacing less than 50% of lost salary (or if a flat sum, it is less than 50% median salary)</li>
+                    <li>2 - government is replacing 50% or more of lost salary (or if a flat sum, it is greater than 50% median salary)</li>
+                </ul>
+            </li>
+            <li><strong>International support: </strong>Announced offers of Covid-19 related aid spending to other countries, additional to any previously announced spending. Monetary amounts in USD. (Source: OxCGRT)</li>
+        </ul>
+
+        <h3>Health Policies</h3>
+        <ul>
+            <li><strong>Contact tracing: </strong>Record government policy on contact tracing after a positive diagnosis. Note: dataset creators are looking for policies that would identify all people potentially exposed to Covid-19; voluntary bluetooth apps are unlikely to achieve this. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no contact tracing</li>
+                    <li>1 - limited contact tracing; not done for all cases</li>
+                    <li>2 - comprehensive contact tracing; done for all identified cases</li>
+                </ul>
+            </li>
+            <li><strong>Emergency investment in healthcare: </strong>Announced short term spending on healthcare system, eg hospitals, masks, etc., additional to any previously announced spending. Monetary amounts in USD. (Source: OxCGRT)</li>
+            <li><strong>Facial coverings: </strong>Record policies on the use of facial coverings outside the home. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - No policy</li>
+                    <li>1 - Recommended</li>
+                    <li>2 - Required in some specified shared/public spaces outside the home with other people present, or some situations when social distancing not possible</li>
+                    <li>3 - Required in all shared/public spaces outside the home with other people present or all situations when social distancing not possible</li>
+                    <li>4 - Required outside the home at all times regardless of location or presence of other people</li>
+                </ul>
+            </li>
+            <li><strong>Investment in vaccines: </strong>Announced public spending on Covid-19 vaccine development, additional to previously announced spending. Monetary amounts in USD. (Source: OxCGRT)</li>
+            <li><strong>Public info campaigns: </strong>Record presence of public info campaigns. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no Covid-19 public information campaign</li>
+                    <li>1 - public officials urging caution about Covid-19</li>
+                    <li>2 - coordinated public information campaign (eg across traditional and social media)</li>
+                </ul>
+            </li>
+            <li><strong>Testing policy: </strong>Record government policy on who has access to testing. Note: this records policies about testing for current infection (PCR tests) not testing for immunity (antibody test). (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - no testing policy</li>
+                    <li>1 - only those who both (a) have symptoms AND (b) meet specific criteria (eg key workers, admitted to hospital, came into contact with a known case, returned from overseas)</li>
+                    <li>2 - testing of anyone showing Covid-19 symptoms</li>
+                    <li>3 - open public testing (eg "drive through" testing available to asymptomatic people)</li>
+                </ul>
+            </li>
+            <li><strong>Vaccination policy: </strong>Record policies for vaccine delivery for different groups. (Source: OxCGRT). Coding: 
+                <ul>
+                    <li>0 - No availability</li>
+                    <li>1 - Availability for ONE of following: key workers/ clinically vulnerable groups (non elderly) / elderly groups</li>
+                    <li>2 - Availability for TWO of following: key workers/ clinically vulnerable groups (non elderly) / elderly groups</li>
+                    <li>3 - Availability for ALL of following: key workers/ clinically vulnerable groups (non elderly) / elderly groups</li>
+                    <li>4 - Availability for all three plus partial additional availability (select broad groups/ages)</li>
+                    <li>5 - Universal availability</li>
+                </ul>
+            </li>
+        </ul>
+        <h3>Demographics</h3>
+        <ul>
+            <li><strong>Population: </strong>Population in 2020 (Source: OWID)</li>
+            <li><strong>Population density (pop/km^2): </strong>Number of people divided by land area, measured in square kilometers, most recent year available (Source: OWID)</li>
+            <li><strong>Median age: </strong>Median age of the population, UN projection for 2020 (Source: OWID)</li>
+            <li><strong>Age 65+ (% of pop): </strong>Share of the population that is 65 years and older, most recent year available (Source: OWID)</li>
+            <li><strong>Age 70+ (% of pop): </strong>Share of the population that is 70 years and older in 2015 (Source: OWID)</li>
+            <li><strong>Life expectancy at birth, 2019: </strong>Life expectancy at birth in 2019 (Source: OWID)</li>
+            <li><strong>GDP per capita: </strong>Gross domestic product at purchasing power parity (constant 2011 international dollars), most recent year available (Source: OWID)</li>
+            <li><strong>Extreme poverty (% of pop): </strong>Share of the population living in extreme poverty, most recent year available since 2010 (Source: OWID)</li>
+            <li><strong>Human development index (UN): </strong>A composite index measuring average achievement in three basic dimensions of human development—a long and healthy life, knowledge and a decent standard of living. Values for 2019. (Source: OWID)</li>
+            <li><strong>Cardiovascular death rate (deaths per 100k): </strong>Death rate from cardiovascular disease in 2017 (annual number of deaths per 100,000 people) (Source: OWID)</li>
+            <li><strong>Diabetes prevalence (% of pop): </strong>Diabetes prevalence (% of population aged 20 to 79) in 2017 (Source: OWID)</li>
+            <li><strong>Smokers, female (% of pop): </strong>Share of women who smoke, most recent year available (Source: OWID)</li>
+            <li><strong>Smokers, male (% of pop): </strong>Share of men who smoke, most recent year available (Source: OWID)</li>
+        </ul>
+    </div>
+
     <script type="text/javascript" src="viz_all.js"></script>
     <script type="text/javascript">
         // this makes it so chrome doesn't reload halfway down the page
