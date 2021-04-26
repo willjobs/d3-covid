@@ -361,7 +361,7 @@ function redrawViz1a() {
 
             let dataText = d[viz1.selectedAttribute];
             if(typeof dataText == "number") {
-                dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
+                dataText = (isNaN(dataText) ? "No data" : (Math.round(1000 * dataText) / 1000).toLocaleString());  // round to 3 digits
             } else {
                 dataText = (dataText == "NA" ? "No data" : dataText);
             }
@@ -556,7 +556,7 @@ function redrawViz1b() {
 
                 let dataText = d[viz1.selectedAttribute];
                 if(typeof dataText == "number") {
-                    dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
+                    dataText = (isNaN(dataText) ? "No data" : (Math.round(1000 * dataText) / 1000).toLocaleString());  // round to 3 digits
                 } else {
                     dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
                 }
@@ -696,10 +696,10 @@ function redrawViz1c() {
         .y(d => viz1c.yScale(d[viz1c.attributeData] > 0 ? d[viz1c.attributeData] : 0));
 
     let lines = viz1c.svg.selectAll(".viz1c.line")
-        .data(viz1c.nestedData, d => d[0]);  // use the country name in d[0] as the "key" for merging later
+                     .data(viz1c.nestedData, d => d[0]);  // use the country name in d[0] as the "key" for merging later
     
     let labels = viz1c.svg.selectAll(".viz1c.line-label")
-        .data(viz1c.nestedData, d => d[0]);
+                      .data(viz1c.nestedData, d => d[0]);
 
     lines.exit()
         .transition()
@@ -901,7 +901,7 @@ function redrawViz3() {
                     const getDataText = function(xOrY="x") {
                         let dataText = d[(xOrY == "x" ? viz3.selectedXAttribute : viz3.selectedYAttribute)];
                         if(typeof dataText == "number") {
-                            dataText = (isNaN(dataText) ? "No data" : Math.round(1000 * dataText) / 1000);  // round to 3 digits
+                            dataText = (isNaN(dataText) ? "No data" : (Math.round(1000 * dataText) / 1000).toLocaleString());  // round to 3 digits
                         } else {
                             dataText = (((dataText == "NA") || (dataText == "")) ? "No data" : dataText);
                         }
@@ -1297,7 +1297,7 @@ function makeViz1c() {
             let closestValueText = closestCountryRow[viz1.selectedAttribute];
 
             if(typeof closestValueText == "number") {
-                closestValueText = (isNaN(closestValueText) ? "No data" : Math.round(1000 * closestValueText) / 1000); // round to nearest 3 decimal places
+                closestValueText = (isNaN(closestValueText) ? "No data" : (Math.round(1000 * closestValueText) / 1000).toLocaleString()); // round to nearest 3 decimal places
             } else {
                 closestValueText = (closestValueText == "NA" ? "No data" : closestValueText);
             }
