@@ -623,7 +623,6 @@ function redrawViz1c() {
     d3.selectAll(".viz1c .x").style("display", axisVisibility);
     d3.selectAll(".viz1c .y").style("display", axisVisibility);
     d3.selectAll(".viz1c .grid").style("display", axisVisibility);
-    //viz1c.title.style("display", axisVisibility);
 
     viz1c.dateLine
         .style("display", axisVisibility)
@@ -631,8 +630,6 @@ function redrawViz1c() {
         .duration(viz1.shortenTransitions > 0 ? 0 : 200)  // move the line immediately if dragging the time slider
         .attr("x1", viz1c.xScale(viz1.selectedDate))
         .attr("x2", viz1c.xScale(viz1.selectedDate));
-
-    //viz1c.title.text(viz1c.attributeName + " over time");
 
     /******
     * update y-axis (attribute)
