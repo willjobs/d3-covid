@@ -349,8 +349,8 @@ function redrawViz1a() {
 
         d3.select("#map .legend svg")
             .style("position", "relative")
-                .style("top", legendTop)
-                .style("left", 20);
+                .style("top", legendTop + "px")
+                .style("left", 20 + "px");
     }
 
     d3.selectAll("#map .tick text").style("font-size", FONT_SIZES.legendLabel + "px");
@@ -1793,8 +1793,8 @@ function makeViz3() {
 
 Promise.all([
     d3.csv("../data/data_dictionary.csv", dictRowParser),
-    d3.csv("../data/covid_data.csv", dataRowParser),
-    //d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
+    //d3.csv("../data/covid_data.csv", dataRowParser),
+    d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
     d3.json("../data/countries-mapshaper-simplified_v2.json")
 ]).then(function (files) {
     dataDict = files[0];
@@ -2102,7 +2102,7 @@ Promise.all([
 
     
     d3.selectAll(".spinner").remove();
-    d3.select("#viz1-container").style("margin-left", "0");
-    d3.select("#viz2-container").style("margin-left", "0");
-    d3.select("#viz3-container").style("margin-left", "0");
+    d3.select("#viz1-container").style("margin-left", "0px");
+    d3.select("#viz2-container").style("margin-left", "0px");
+    d3.select("#viz3-container").style("margin-left", "0px");
 });

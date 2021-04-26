@@ -2,6 +2,11 @@ body {
     font-family: sans-serif;
 }
 
+#introduction {
+    width: 800px; 
+    max-width: 100%;
+}
+
 .spinner {
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
@@ -16,7 +21,7 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-.container {
+#introduction, .container {
     padding-bottom:30px;
     margin-bottom: 30px;
     border-bottom: 3px solid grey;
@@ -150,27 +155,27 @@ body {
 }
 
 @-webkit-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    0%    { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2;}
     50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
-    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
+    100%  { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @-moz-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    0%    { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2;}
     50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
-    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
+    100%  { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @-ms-keyframes pulsate {
-    0%    { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2;}
+    0%    { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2;}
     50%   { opacity:1.0; stroke-width: 1; stroke-dasharray: 3,3}
-    100%  { opacity:0.6; stroke-width: 0.5; stroke-dasharray: 2,2}
+    100%  { opacity:0.8; stroke-width: 0.5; stroke-dasharray: 2,2}
 }
 
     @keyframes pulsate {
-    0%    { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2;}
+    0%    { opacity:0.8; stroke-width: 1; stroke-dasharray: 2,2;}
     50%   { opacity:1.0; stroke-width: 2; stroke-dasharray: 3,3}
-    100%  { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2}
+    100%  { opacity:0.8; stroke-width: 1; stroke-dasharray: 2,2}
 }
 
 div.viz2 {
