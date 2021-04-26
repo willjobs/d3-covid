@@ -1,6 +1,7 @@
 body {
     font-family: sans-serif;
 }
+
 .spinner {
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
@@ -13,6 +14,12 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.container {
+    padding-bottom:30px;
+    margin-bottom: 30px;
+    border-bottom: 3px solid grey;
 }
 
 .hover-bar {
@@ -166,31 +173,36 @@ body {
     100%  { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2}
 }
 
-
-.viz2 .attribute-name {
-    font-weight: bold;
-    position: sticky;
+div.viz2 {
+    clear:left; 
+    margin-top: 20px
 }
 
-.viz2 td.attribute-name {
-    text-align: left;
-    background-color: white;
+div.viz2 svg {
+    margin-top: 20px;
+}
+
+div.viz2-table {  /* div containing the table, for scrollability */
+    width:80%; 
+    overflow-x: auto;
 }
 
 .viz2 table { 
     table-layout: fixed; 
-}
-
-.viz2 thead tr {
-    background-color: #bbb;
+    margin-left: 5px;
+    border-spacing: 0px;
 }
 
 .viz2 table, 
 .viz2 th, 
 .viz2 td {
     border: 1px solid black;
-    border-collapse: collapse;
-    padding:2px;
+    background-color: white;
+    z-index: 1;
+}
+
+.viz2 thead th {
+    background-color: #bbb;
 }
 
 .viz2 th, .viz2 td {
@@ -198,39 +210,24 @@ body {
     text-align: center;
 }
 
-.viz2 .selected-row {
+.viz2 tr td:first-child {
+    text-align: left;
+}
+
+.viz2 .attribute-name th {
+    text-align: center;
+}
+
+
+.viz2 .selected-row,
+.viz2 .selected-row td {
     background-color: lightskyblue;
 }
 
-.viz2 .selected-row td:first-child {
-    background-color: lightskyblue;
-}
-
-.viz2 table thead th {
-    position: sticky;
-    z-index: 1;
-}
-
-.viz2 table thead th:first-child {
-    position: sticky;
-    left: 0;
-    background-color: #bbb;
-    z-index: 2;
-}
-
-.viz2 table tbody tr td {
-    position: relative;
-    z-index: 1;
-}
-
-.viz2 table tbody tr td:first-child {
+.viz2 table thead th:first-child,
+.viz2 table tbody tr td:first-child {  /* first column is sticky */
     position: sticky;
     left: 0;
     z-index: 2;
-}
-
-.container {
-    padding-bottom:30px;
-    margin-bottom: 30px;
-    border-bottom: 3px solid grey;
+    font-weight: bold;
 }

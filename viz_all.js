@@ -789,7 +789,7 @@ function redrawViz2() {
     viz2.title.text(var_metadata.display_name + " over time");
 
     const maxDate = d3.max(covidData, d => d.date).getTime();
-    viz2.tableTitle.html("<span style='font-weight: bold; text-decoration:underline;'>" + var_metadata.display_name + "</span> on " + formatDateLong(maxDate) + ":");
+    viz2.tableTitle.html("Statistics on <span style='font-weight: bold; text-decoration:underline;'>" + viz2.selectedCategory + "</span> on " + formatDateLong(maxDate) + ":");
 
     /******
      * update y-axis (attribute)
@@ -923,7 +923,6 @@ function redrawViz2() {
     const headerRow = table.append("thead").append("tr");
     headerRow.append("th")
              .text("Attribute")
-             .classed("attribute-name", true)
              .attr("width", WIDTH_ATTRIBUTE_COL);
 
     viz2.selectedCountries.forEach(function(country) {
@@ -943,7 +942,6 @@ function redrawViz2() {
         }
 
         tr.append("td")
-            .classed("attribute-name", true)
             .text(attribute.display_name);
         
         // make a map from country --> attribute value
@@ -1563,8 +1561,6 @@ function makeViz2() {
     viz2.dims["innerHeight"] = viz2.dims.height - viz2.margin.top - viz2.margin.bottom
     viz2.dims["innerWidth"] = viz2.dims.width - viz2.margin.left - viz2.margin.right
 
-    d3.select("div.viz2-table").style("margin-left", (viz2.margin.left - 5) + "px");
-
     /***************
      *  Create svg
     ***************/
@@ -2093,6 +2089,7 @@ Promise.all([
 
     viz1.redrawFunc = redrawViz1All; // need this to be able to handle timestep updates
     dateUpdate(viz1, viz1.selectedDate);  // this will kick off all the redraws for viz 1
+    d3.select('path.shape-USA').dispatch('click');  // initialize with USA
 
     makeViz2();
     makeViz2ContinentLegend();
@@ -2103,6 +2100,7 @@ Promise.all([
     dateUpdate(viz3, viz3.selectedDate);  // this will kick off the redraw for viz 3
 
 
+    
     d3.selectAll(".spinner").remove();
     d3.select("#viz1-container").style("margin-left", "0");
     d3.select("#viz2-container").style("margin-left", "0");
