@@ -1800,10 +1800,10 @@ function makeViz3() {
 }
 
 Promise.all([
-    d3.csv("../data/data_dictionary.csv", dictRowParser),
-    //d3.csv("../data/covid_data.csv", dataRowParser),
-    d3.csv("../data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
-    d3.json("../data/countries-mapshaper-simplified_v2.json")
+    d3.csv("./data/data_dictionary.csv", dictRowParser),
+    //d3.csv("./data/covid_data.csv", dataRowParser),
+    d3.csv("./data/covid_oxford+owid_20210421-154648.csv", dataRowParser),
+    d3.json("./data/country_polygons.json")
 ]).then(function (files) {
     dataDict = files[0];
     covidData = files[1];

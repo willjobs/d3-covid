@@ -1,0 +1,69 @@
+﻿variable_name,data_type,display_name,sort_order,category,numeric_column,larger_is
+countryname,string,Country,0,primary key,,NA
+date,date,Date,0,primary key,,NA
+continent,string,Continent,0,metadata,,NA
+iso_code,string,ISO Code (Alpha-3),0,metadata,,NA
+new_cases,numeric,New cases,1,cases & deaths,,bad
+new_cases_per_million,numeric,"New cases, per million",2,cases & deaths,,bad
+total_cases,numeric,Total cases,3,cases & deaths,,bad
+total_cases_per_million,numeric,"Total cases, per million",4,cases & deaths,,bad
+new_deaths,numeric,New deaths,5,cases & deaths,,bad
+new_deaths_per_million,numeric,"New deaths, per million",6,cases & deaths,,bad
+total_deaths,numeric,Total deaths,7,cases & deaths,,bad
+total_deaths_per_million,numeric,"Total deaths, per million",8,cases & deaths,,bad
+new_tests,numeric,New tests,9,tests,,neutral
+new_tests_per_thousand,numeric,"New tests, per thousand",10,tests,,neutral
+total_tests,numeric,Total tests,11,tests,,neutral
+total_tests_per_thousand,numeric,"Total tests, per thousand",12,tests,,neutral
+positive_rate,numeric,Positive rate,13,tests,,bad
+reproduction_rate,numeric,Reproduction rate (R0),14,tests,,bad
+new_vaccinations,numeric,New vaccinations,15,vaccinations,,good
+new_vaccinations_per_hundred,numeric,"New vaccinations, per hundred",16,vaccinations,,good
+people_vaccinated,numeric,People vaccinated,17,vaccinations,,good
+people_vaccinated_per_hundred,numeric,"People vaccinated, per hundred",18,vaccinations,,good
+people_fully_vaccinated,numeric,People fully vaccinated,19,vaccinations,,good
+people_fully_vaccinated_per_hundred,numeric,"People fully vaccinated, per hundred",20,vaccinations,,good
+icu_patients,numeric,ICU patients,21,hospitals,,bad
+icu_patients_per_million,numeric,"ICU patients, per million",22,hospitals,,bad
+weekly_icu_admissions,numeric,ICU admissions (weekly),23,hospitals,,bad
+weekly_icu_admissions_per_million,numeric,"ICU admissions (weekly), per million",24,hospitals,,bad
+hosp_patients,numeric,Hospitalized patients,25,hospitals,,bad
+hosp_patients_per_million,numeric,"Hospitalized patients, per million",26,hospitals,,bad
+weekly_hosp_admissions,numeric,Hospital admissions (weekly),27,hospitals,,bad
+weekly_hosp_admissions_per_million,numeric,"Hospital admissions (weekly), per million",28,hospitals,,bad
+containment_health_index,numeric,Containment health index,29,aggregate indices,,bad
+economic_support_index,numeric,Economic support index,30,aggregate indices,,good
+government_response_index,numeric,Government response index,31,aggregate indices,,bad
+stringency_index,numeric,Stringency index,32,aggregate indices,,bad
+c3_cancel_public_events,ordinal,Cancel public events,33,containment policies,c3_cancel_public_events_numeric,bad
+c5_close_public_transport,ordinal,Close public transport,34,containment policies,c5_close_public_transport_numeric,bad
+c8_international_travel_controls,ordinal,International travel controls,35,containment policies,c8_international_travel_controls_numeric,bad
+c4_restrictions_on_gatherings,ordinal,Restrictions on gatherings,36,containment policies,c4_restrictions_on_gatherings_numeric,bad
+c7_restrictions_on_internal_movement,ordinal,Restrictions on movement,37,containment policies,c7_restrictions_on_internal_movement_numeric,bad
+c1_school_closing,ordinal,School closing,38,containment policies,c1_school_closing_numeric,bad
+c6_stay_at_home_requirements,ordinal,Stay at home requirements,39,containment policies,c6_stay_at_home_requirements_numeric,bad
+c2_workplace_closing,ordinal,Workplace closing,40,containment policies,c2_workplace_closing_numeric,bad
+e2_debt_contract_relief,ordinal,Debt contract relief,41,economic policies,e2_debt_contract_relief_numeric,good
+e3_fiscal_measures,numeric,Fiscal measures,42,economic policies,,good
+e1_income_support,ordinal,Income support,43,economic policies,e1_income_support_numeric,good
+e4_international_support,numeric,International support,44,economic policies,,good
+h3_contact_tracing,ordinal,Contact tracing,45,health policies,h3_contact_tracing_numeric,good
+h4_emergency_investment_in_healthcare,numeric,Emergency investment in healthcare,46,health policies,,good
+h6_facial_coverings,ordinal,Facial coverings,47,health policies,h6_facial_coverings_numeric,good
+h5_investment_in_vaccines,numeric,Investment in vaccines,48,health policies,,good
+h1_public_information_campaigns,ordinal,Public info campaigns,49,health policies,h1_public_information_campaigns_numeric,good
+h2_testing_policy,ordinal,Testing policy,50,health policies,h2_testing_policy_numeric,good
+h7_vaccination_policy,ordinal,Vaccination policy,51,health policies,h7_vaccination_policy_numeric,good
+population,numeric,Population,52,demographics,,neutral
+population_density,numeric,Population density (pop/km^2),53,demographics,,neutral
+median_age,numeric,Median age,54,demographics,,bad
+aged_65_older,numeric,Age 65+ (% of pop),55,demographics,,bad
+aged_70_older,numeric,Age 70+ (% of pop),56,demographics,,bad
+life_expectancy,numeric,"Life expectancy at birth, 2019",57,demographics,,good
+gdp_per_capita,numeric,GDP per capita,58,demographics,,good
+extreme_poverty,numeric,Extreme poverty (% of pop),59,demographics,,bad
+human_development_index,numeric,Human development index (UN),60,demographics,,good
+cardiovasc_death_rate,numeric,Cardiovascular death rate (deaths per 100k),61,demographics,,bad
+diabetes_prevalence,numeric,Diabetes prevalence (% of pop),62,demographics,,bad
+female_smokers,numeric,"Smokers, female (% of pop)",63,demographics,,bad
+male_smokers,numeric,"Smokers, male (% of pop)",64,demographics,,bad
