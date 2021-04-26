@@ -165,3 +165,61 @@ body {
     50%   { opacity:1.0; stroke-width: 2; stroke-dasharray: 3,3}
     100%  { opacity:0.4; stroke-width: 1; stroke-dasharray: 2,2}
 }
+
+
+.viz2 .attribute-name {
+    font-weight: bold;
+    position: sticky;
+}
+
+.viz2 td.attribute-name {
+    text-align: left;
+}
+
+.viz2 table { 
+    table-layout: fixed; 
+}
+
+.viz2 thead tr {
+    background-color: #bbb;
+}
+
+.viz2 table, 
+.viz2 th, 
+.viz2 td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    padding:2px;
+}
+
+.viz2 th, .viz2 td {
+    overflow: hidden;
+    text-align: center;
+}
+
+.viz2 .selected-row {
+    background-color: lightskyblue;
+}
+
+.viz2 table thead th {
+    position: sticky;
+    z-index: 1;
+}
+
+.viz2 table thead th:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #bbb;
+    z-index: 2;
+}
+
+.viz2 table tbody tr td {
+    position: relative;
+    z-index: 1;
+}
+
+.viz2 table tbody tr td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
