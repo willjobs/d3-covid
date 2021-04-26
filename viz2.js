@@ -148,12 +148,15 @@ function redrawViz2() {
 
     if((var_metadata.data_type == "ordinal")) {
         // get largest value over entire dataset, not just selection
-        let maxValue = d3.max(covidData, d => d[attributeData]);
+        let maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
+        let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
 
         // set tick values to exactly these values
         // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
         viz2.yScale.domain([0, maxValue]);
-        viz2.yAxis.tickValues(d3.range(0, maxValue + 0.5, 0.5));
+        viz2.yAxis
+            .tickValues(d3.range(0, maxValue + 0.5, 0.5))
+            .tickFormat(d => ordinalValues[Math.floor(d * 2)]);
     } else {
         // If we're showing an aggregate index like "stringency index", always show 0 to 100.
         // Otherwise, get the maximum value for the attribute *across the whole dataset* for
@@ -163,13 +166,13 @@ function redrawViz2() {
             maxValue =  100.0;
         } else{
             maxValue = d3.max(covidData.filter(d => viz2.selectedCountries.includes(d.countryname)),
-                                d => d[attributeData]);
+                                d => (d[attributeData] > 0 ? d[attributeData] : 0));
         }
 
         viz2.yScale.domain([0, maxValue]);
 
         // if we switched from an ordinal variable, get rid of the manually specified ticks
-        viz2.yAxis.tickValues(null);
+        viz2.yAxis.tickValues(null).tickFormat(null);
         viz2.yAxisTicks.ticks(5);
     }
 
@@ -200,7 +203,7 @@ function redrawViz2() {
     let lineGenerator = d3.line()
                             .defined(function(d) {return !isNaN(d[attributeData])})
                             .x(d => viz2.xScale(d.date))
-                            .y(d => viz2.yScale(d[attributeData] >= 0 ? d[attributeData] : 0));
+                            .y(d => viz2.yScale(d[attributeData] > 0 ? d[attributeData] : 0));
 
     let lines = viz2.svg.selectAll(".viz2.line")
                     .data(nestedData, d => d[0]);  // "key" is the country name in the grouped dataset
