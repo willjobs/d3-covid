@@ -139,7 +139,9 @@ function redrawViz2() {
     let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : viz2.selectedAttribute;
 
     viz2.title.text(var_metadata.display_name + " over time");
-    // viz2.subtitle.text('viz2.selectedCountries');
+
+    const maxDate = d3.max(covidData, d => d.date).getTime();
+    viz2.tableTitle.html("<span style='font-weight: bold; text-decoration:underline;'>" + var_metadata.display_name + "</span> on " + formatDateLong(maxDate) + ":");
 
     /******
      * update y-axis (attribute)
@@ -259,11 +261,10 @@ function redrawViz2() {
     if(viz2Data.length == 0) {return}
 
     const categoryAttributes = dataDict.filter(d => d.category == viz2.selectedCategory);
-    const maxDate = d3.max(covidData, d => d.date).getTime();
     const viz2TableData = viz2Data.filter(d => d.date.getTime() == maxDate);  // table only shows latest data
     
-    d3.select(".viz2 table").remove(); // remove the table we're updating
-    const table = d3.select(".viz2").append("table");
+    d3.select(".viz2-table table").remove(); // remove the table we're updating
+    const table = d3.select(".viz2-table").append("table");
 
     const WIDTH_PER_COUNTRY_COL = 125;
     const WIDTH_ATTRIBUTE_COL = 200;
@@ -322,19 +323,18 @@ function redrawViz2() {
 function makeViz2() {
     viz2.margin = {top: 40, right: 150, bottom: 60, left: 70};
 
-    viz2.dims = {height: 400, width: d3.max([600,  // no smaller than 600px wide
-                                    d3.min([900, // no larger than 900px wide
-                                            Math.floor(window.innerWidth / 2)])])};
+    viz2.dims = {height: 400, width: 700};
 
     viz2.dims["innerHeight"] = viz2.dims.height - viz2.margin.top - viz2.margin.bottom
     viz2.dims["innerWidth"] = viz2.dims.width - viz2.margin.left - viz2.margin.right
 
+    console.log(viz2.margin.left);
+    d3.select("div.viz2-table").style("margin-left", (viz2.margin.left - 5) + "px");
 
     /***************
      *  Create svg
     ***************/
-    viz2.svg = d3.select("div.viz2")
-                 .append("svg")
+    viz2.svg = d3.select("div.viz2 svg")
                      .attr("width", viz2.dims.width)
                      .attr("height", viz2.dims.height)
                      .attr("viewBox", `0 0 ${viz2.dims.width} ${viz2.dims.height}`)
@@ -415,7 +415,40 @@ function makeViz2() {
                      .attr("y", 0)
                      .attr("text-anchor", "start")
                      .attr("transform", "translate(0, -10)")
-                     .style("font-size", "20px");
+                     .style("font-size", FONT_SIZES.title + "px");
+    
+    /***************
+     * Table title
+    ***************/
+   viz2.tableTitle = d3.select("div.viz2 p")
+                        .style("font-size", FONT_SIZES.title + "px");
+}
+
+function makeViz2ContinentLegend() {
+    let margin = { top: 30, right: 0, bottom: 0, left: 0 };
+    let dims = {height: 300, width: 100};
+    dims["innerHeight"] = dims.height - margin.top - margin.bottom
+    dims["innerWidth"] = dims.width - margin.left - margin.right
+
+    let svg = d3.select("div.viz2-continents")
+                .append("svg")
+                    .attr("width", dims.width)
+                    .attr("height", dims.height)
+                    .attr("viewBox", `0 0 ${dims.width} ${dims.height}`)
+                    .attr("preserveAspectRatio", "xMinYMin")
+                    .classed("viz2", true)
+                .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append(() => legend({
+                color: continentColors,
+                title: "Continents",
+                width: 25,
+                height: (25 * continentColors.domain().length),
+                ticks: 4,
+                tickFormat: ".0f",
+                reverseOrdinal: true
+            }));
 }
 
 
@@ -532,6 +565,7 @@ Promise.all([
     * Create the viz!
     **************************/
     makeViz2();
+    makeViz2ContinentLegend();
     redrawViz2();  // since we don't have a dateUpdate step for this viz, we have to manually kick this off
     d3.selectAll(".spinner").remove();
     d3.select("#viz2-container").style("margin-left", "0");

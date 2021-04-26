@@ -7,6 +7,7 @@
     <title>Viz 2</title>
     <link rel="stylesheet" href="covid.css">
     <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
+    <script type="text/javascript" src="legend.js"></script>
 </head>
 <body>
     <div class="spinner"></div>
@@ -23,11 +24,15 @@
             <label for="viz2-attributes">Attribute: &nbsp;</label><select name="viz2-attributes" id="viz2-attributes"></select>
         </div>
 
-        <div class="viz2" style="clear:left; margin-top: 20px"></div>
+        <div class="viz2" style="clear:left; margin-top: 20px">
+            <svg></svg>
+            <div class="viz2-continents" style="display:inline-block;"></div>
+            <div class="viz2-table">
+                <p class="table-title"></p>
+                <table></table>
+            </div>
+        </div>
     </div>
     <script type="text/javascript" src="viz2.js"></script>
 </body>
 </html>
-
-
-
