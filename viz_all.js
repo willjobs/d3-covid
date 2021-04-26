@@ -1799,25 +1799,9 @@ function makeViz3() {
     legend.style("display", "none"); // will be displayed when there are data
 }
 
-function getUnzipPromise(zipFileLocation, innerFileName) {
-    return (fetch(zipFileLocation)       // 1) fetch the url
-                .then(function (response) {                       // 2) filter on 200 OK
-                    if (response.status === 200 || response.status === 0) {
-                        return Promise.resolve(response.blob());
-                    } else {
-                        return Promise.reject(new Error(response.statusText));
-                    }
-}).then(JSZip.loadAsync)                     // 2) chain with the zip promise
-    .then(function(zip) {
-        return zip.file(innerFileName).async("string"); // 3) chain with the text content promise
-    }));
-}
-
-getUnzipPromise("https://d3-covid.s3.amazonaws.com/covid_data.zip", "covid_data.csv")
-.then(function(unzipped) {
 Promise.all([
     d3.csv("https://d3-covid.s3.amazonaws.com/data_dictionary.csv", dictRowParser),
-    d3.csvParse(unzipped, dataRowParser),
+    d3.csv("https://d3-covid.s3.amazonaws.com/covid_data.csv", dataRowParser),
     d3.json("https://d3-covid.s3.amazonaws.com/country_polygons.json")
 ]).then(function (files) {
     dataDict = files[0];
@@ -2128,4 +2112,4 @@ Promise.all([
     d3.select("#viz1-container").style("margin-left", "0px");
     d3.select("#viz2-container").style("margin-left", "0px");
     d3.select("#viz3-container").style("margin-left", "0px");
-});});
+});
