@@ -15,7 +15,7 @@
 <body>
     <div class="spinner"></div>
 
-    <div id="viz1-container" style="margin-left:-9999px">
+    <div id="viz1-container" class="container" style="margin-left:-9999px">
         <label for="viz1-attributes">Attribute: </label>
         <select name="viz1-attributes" id="viz1-attributes"></select>
 
@@ -38,14 +38,37 @@
         <div class="viz1a title"><span></span></div>
         <div id="map" style="margin-top:10px;"></div>
         
-        <div style="min-width:1200px; overflow:visible">
+        <div style="min-width:1200px; overflow:visible;">
             <div class="viz1b" style="display:block; float:left;"></div>
             <div class="viz1c" style="display:block; float:left;"></div>
             <div class="viz1-continents" style="display:block; float:left;"></div>
         </div>
+
+        <br clear="all">
     </div>
 
-    <div id="viz3-container" style="margin-left:-9999px; clear:left;">
+    <div id="viz2-container" class="container" style="margin-left:-9999px">
+        <div style="float:left; margin-bottom: 20px;">
+            <select name="viz2-countries" id="viz2-countries" multiple size="10"></select>
+        </div>
+
+        <div style="float:left; margin-left:20px">
+            <label for="viz2-categories">Category: </label><select name="viz2-categories" id="viz2-categories"></select>
+            <br><br>
+            <label for="viz2-attributes">Attribute: &nbsp;</label><select name="viz2-attributes" id="viz2-attributes"></select>
+        </div>
+
+        <div class="viz2" style="clear:left; margin-top: 20px">
+            <svg></svg>
+            <div class="viz2-continents" style="display:inline-block;"></div>
+            <div class="viz2-table">
+                <p class="table-title"></p>
+                <table></table>
+            </div>
+        </div>
+    </div>
+
+    <div id="viz3-container" class="container" style="margin-left:-9999px; clear:left;">
         <div style="float:left; margin-bottom: 20px;">
             <select name="viz3-countries" id="viz3-countries" multiple size="10"></select>
         </div>
