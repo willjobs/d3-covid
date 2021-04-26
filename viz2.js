@@ -439,6 +439,15 @@ Promise.all([
                 .attr("value", country)
                 .text(country);
         });
+    
+    // initialize with these countries selected
+    const initialCountries = ["Russia", "New Zealand", "Ethiopia"];
+
+    d3.selectAll("select#viz2-countries option")
+        .filter(function() {return initialCountries.includes(d3.select(this).text())})
+        .attr("selected", "selected");
+
+    viz2.selectedCountries = initialCountries;
 
     // create listener
     selectCountry.on("change", function() {
