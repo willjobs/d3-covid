@@ -189,6 +189,7 @@ div.viz2 svg {
 
 div.viz2-table {  /* div containing the table, for scrollability */
     width:80%; 
+    max-width:800px;
     overflow-x: auto;
 }
 
