@@ -1737,14 +1737,21 @@ Promise.all([
     makeDateSlider(viz1, "#viz1-date-slider-wrap");
     makeDateSlider(viz3, "#viz3-date-slider-wrap");
     
+    // initialize with these four countries
+    viz1.selectedCountries = ["United States", "Russia", "China", "Brazil"];
     makeViz1a();
     makeViz1b();
     makeViz1c();
     makeViz1ContinentLegend();
+    
+    // make sure these four are highlighted on the map at load time
+    d3.select(".shape-USA").classed("selected-country", true);
+    d3.select(".shape-RUS").classed("selected-country", true);
+    d3.select(".shape-CHN").classed("selected-country", true);
+    d3.select(".shape-BRA").classed("selected-country", true);
 
     viz1.redrawFunc = redrawViz1All; // need this to be able to handle timestep updates
     dateUpdate(viz1, viz1.selectedDate);  // this will kick off all the redraws for viz 1
-    d3.select('path.shape-USA').dispatch('click');  // initialize with USA
 
     makeViz2();
     redrawViz2();  // since we don't have a dateUpdate step for this viz, we have to manually kick this off for viz 2
