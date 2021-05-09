@@ -48,7 +48,6 @@ var viz1c = {
 var viz2 = {};
 
 var viz3 = {
-    selectedCountries: [],
     shortenTransitions: 0  // this is to allow us to speed up transitions when dragging the date slider
 };
 
@@ -844,8 +843,7 @@ function redrawViz2() {
 }
 
 function redrawViz3() {
-    const viz3Data = covidData.filter(d => (viz3.selectedCountries.includes(d.countryname) && 
-                                           (d.date.getTime() == viz3.selectedDate.getTime())));
+    const viz3Data = covidData.filter(d => (d.date.getTime() == viz3.selectedDate.getTime()));
 
     const varMetadata = {
         'x': dataDict.filter(d => d.variable_name == viz3.selectedXAttribute)[0], 
@@ -898,15 +896,11 @@ function redrawViz3() {
                 .tickFormat(d => ordinalValues[Math.floor(d * 2)]);
         } else {
             // If we're showing an aggregate index like "stringency index", always show 0 to 100.
-            // Otherwise, get the maximum value for the attribute *across the whole dataset* for 
-            //    the selected countries. This is because we don't want the scales to keep jumping 
-            //    around for a given set of countries and making it hard to see changes.
             if (varMetadata[xOrY].category == 'aggregate indices') {
                 maxValue =  100.0;
             } else {
                 // Note: using viz3Data, not entire dataset. We want to see the trend at any point in time
-                maxValue = d3.max(viz3Data.filter(d => viz3.selectedCountries.includes(d.countryname)),
-                                    d => (d[attributeNames[xOrY].data] > 0 ? d[attributeNames[xOrY].data] : 0));
+                maxValue = d3.max(viz3Data, d => (d[attributeNames[xOrY].data] > 0 ? d[attributeNames[xOrY].data] : 0));
             }
             
             scale.domain([0, maxValue]);
@@ -1680,42 +1674,6 @@ Promise.all([
         redrawViz2();
     });
 
-    /***************************
-    * Viz 3: Countries select list. Add countries to select list and set up "change" listener to redraw
-    **************************/
-    selectCountry = d3.select("select#viz3-countries");
-
-    // get unique countries, then append <option> to <select>
-    const uniqueCountries = Array.from(new Set(covidData.map(d => d.countryname))).sort();
-    
-    // put country into dropdown menu
-    uniqueCountries.forEach(function(country) {
-        selectCountry.append('option')
-        .attr("value", country)
-        .text(country);
-    });
-
-    // initialize with all countries selected
-    d3.selectAll("select#viz3-countries option").attr("selected", "selected");
-    viz3.selectedCountries = uniqueCountries;
-
-    // create listener
-    selectCountry.on("change", function() {
-        let countries = [];
-
-        d3.select(this)
-          .selectAll("option:checked") 
-          .each(function() { countries.push(this.value); }); // for each select country, get its value (name)
-
-        // want to maintain ordering of original selection
-        viz3.selectedCountries = viz3.selectedCountries.filter(d => countries.includes(d));
-        let added = countries.filter(d => !viz3.selectedCountries.includes(d));
-        viz3.selectedCountries = viz3.selectedCountries.concat(added);
-
-        redrawViz3();
-    });
-
-    
     /***************************
     * Viz 3: Make both attribute dropdowns. Add attributes with <optgroup> for each category, <option> for each attribute
     **************************/
