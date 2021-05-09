@@ -26,6 +26,9 @@ var formatMonthYear = function (d) {
 var covidData;
 var dataDict;
 var geomData;
+var minDate;
+var maxDate;
+
 
 // these properties apply to all 3 parts of viz1
 var viz1 = {
@@ -42,9 +45,7 @@ var viz1c = {
     clicked: null  // if a user clicks on a country, this will be a string with the country name
 };
 
-var viz2 = {
-    selectedCountries: []
-};
+var viz2 = {};
 
 var viz3 = {
     selectedCountries: [],
@@ -159,9 +160,6 @@ function makeDateSlider(viz, cssLocation) {
     ***************************/
     viz.dateSliderValue = 0;
     viz.dateSliderWidth = 400;
-
-    let minDate = d3.min(covidData, d => d.date);
-    let maxDate = d3.max(covidData, d => d.date);
 
     viz.dateXScale = d3.scaleTime()
                        .domain([minDate, maxDate])
@@ -415,7 +413,7 @@ function redrawViz1a() {
             // selection changed: re-draw!
             redrawViz1b();
             redrawViz1c();
-
+            redrawViz2();
         }).transition()
         .duration(viz1.shortenTransitions > 0 ? viz1.shortenTransitions : 200)
         .attr("fill", function (d) {
@@ -784,146 +782,22 @@ function redrawViz1All() {
 }
 
 function redrawViz2() {
-    //Get the data for selected countries
-    let viz2Data = covidData.filter(d => viz2.selectedCountries.includes(d.countryname));
-    let var_metadata = dataDict.filter(d => d.variable_name == viz2.selectedAttribute)[0];
-
-    // if ordinal, use numeric_column attribute (e.g., c1_school_closing_numeric), otherwise use attribute as selected
-    let attributeData = var_metadata.data_type == "ordinal" ? var_metadata.numeric_column : viz2.selectedAttribute;
-
-    viz2.title.text(var_metadata.display_name + " over time");
-
-    const maxDate = d3.max(covidData, d => d.date).getTime();
-    viz2.tableTitle.html("Statistics on <span style='font-weight: bold; text-decoration:underline;'>" + viz2.selectedCategory + "</span> on " + formatDateLong(maxDate) + ":");
-
-    /******
-     * update y-axis (attribute)
-    ******/
-    // see if this variable is ordinal; if it is, use its "_numeric" column
-    let maxValue;
-
-    if((var_metadata.data_type == "ordinal")) {
-        // get largest value over entire dataset, not just selection
-        maxValue = d3.max(covidData, d => (d[attributeData] > 0 ? d[attributeData] : 0));
-        let ordinalValues = ["0", "1-Local", "1-National", "2-Local", "2-National", "3-Local", "3-National", "4-Local", "4-National", "5-Local", "5-National"];
-
-        // set tick values to exactly these values
-        // e.g., if maxValue = 2.5, ticks will be: 0, 0.5, 1, 1.5, 2, 2.5
-        viz2.yScale.domain([0, maxValue]);
-        viz2.yAxis
-            .tickValues(d3.range(0, maxValue + 0.5, 0.5))
-            .tickFormat(d => ordinalValues[Math.floor(d * 2)]);
+    let viz2Data = covidData.filter(d => (viz1.selectedCountries.includes(d.countryname) 
+                                          && (d.date.getTime() == maxDate.getTime())));  // table only shows latest data
+    if(viz2Data.length == 0) {
+        d3.select("div.viz2").style("display","none");
+        return;
     } else {
-        // If we're showing an aggregate index like "stringency index", always show 0 to 100.
-        // Otherwise, get the maximum value for the attribute *across the whole dataset* for
-        //    the selected countries. This is because we don't want the scales to keep jumping
-        //    around for a given set of countries and making it hard to see changes.
-        if(var_metadata.category == 'aggregate indices') {
-            maxValue =  100.0;
-        } else{
-            maxValue = d3.max(covidData.filter(d => viz2.selectedCountries.includes(d.countryname)),
-                                d => (d[attributeData] > 0 ? d[attributeData] : 0));
-        }
-
-        viz2.yScale.domain([0, maxValue]);
-
-        // if we switched from an ordinal variable, get rid of the manually specified ticks
-        viz2.yAxis.tickValues(null).tickFormat(null);
-        viz2.yAxisTicks.ticks(5);
+        d3.select("div.viz2").style("display","inherit");
     }
 
-    // Update y-axis (x-axis is constant)
-    d3.select(".viz2.y.axis")
-        .transition()
-        .duration(300)
-        .call(viz2.yAxis);
-
-    // add the Y gridlines (x-axis is constant)
-    // see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-    d3.select(".viz2.y.grid")
-        .call(viz2.yAxisTicks);
-
-    // set all ticks' fonts. These aren't styles/CSS, these are attributes
-    d3.selectAll(".viz2.axis")
-        .attr("font-size", FONT_SIZES.tick)
-        .attr("font-family", "sans-serif");
-
-    /******
-     * Lines of the plot
-    ******/
-    // create a "nested" structure to allow us to draw one line per country
-    // see https://stackoverflow.com/a/35279106/1102199
-    // "d3.nest()" is deprecated; see https://github.com/d3/d3-array/blob/master/README.md#group
-    const nestedData = d3.group(viz2Data, d => d.countryname);
-
-    let lineGenerator = d3.line()
-                            .defined(function(d) {return !isNaN(d[attributeData]);})
-                            .x(d => viz2.xScale(d.date))
-                            .y(d => viz2.yScale(d[attributeData] > 0 ? d[attributeData] : 0));
-
-    let lines = viz2.svg.selectAll(".viz2.line")
-                    .data(nestedData, d => d[0]);  // "key" is the country name in the grouped dataset
-    
-    let labels = viz2.svg.selectAll(".viz2.line-label")
-                     .data(nestedData, d => d[0]);
-    
-    lines.exit()
-        .transition()
-        .duration(200)
-        .style("stroke-opacity", 0)
-        .remove();
-
-    labels.exit()
-        .transition()
-        .duration(200)
-        .style("fill-opacity", 0)
-        .remove();
-
-    lines.enter()
-        .append("path")
-            .classed("viz2 line", true)
-            .attr("stroke-width", 1.5)
-            .attr("fill", "none")
-            .merge(lines)
-                .attr("stroke", d => continentColors(d[1][0].continent))
-                .attr("stroke-opacity", 1)
-                .attr("id", d => "line-" + d[0])
-                .transition()
-                .duration(500)
-                .attr("d", d => lineGenerator(d[1]));
-
-    labels.enter()
-        .append("text")
-            .classed("viz2 line-label", true)
-            .attr("font-size", FONT_SIZES.lineLabel)
-        .merge(labels)
-            .text(d => d[0])    
-            .attr("x", viz2.dims.innerWidth + 5)
-            .attr("stroke", d => continentColors(d[1][0].continent))
-            .attr("stroke-width", 0.75)
-            .transition()
-            .duration(500)
-            .style("fill-opacity", 1)
-            .attr("y", function(d) {
-                const lastValue = d[1].slice(-1)[0][attributeData];
-                return viz2.yScale(lastValue > 0 ? lastValue : 0);
-            });
-
-    /************
-     * Create the table
-    ************/
-    if(viz2Data.length == 0) {return;}
-
-    const categoryAttributes = dataDict.filter(d => d.category == viz2.selectedCategory);
-    const viz2TableData = viz2Data.filter(d => d.date.getTime() == maxDate);  // table only shows latest data
-    
-    d3.select(".viz2-table table").remove(); // remove the table we're updating
+    // replace the table we're updating
+    d3.select(".viz2-table table").remove();
     const table = d3.select(".viz2-table").append("table");
 
     const WIDTH_PER_COUNTRY_COL = 125;
     const WIDTH_ATTRIBUTE_COL = 200;
-
-    table.attr("width", WIDTH_ATTRIBUTE_COL + viz2.selectedCountries.length * WIDTH_PER_COUNTRY_COL);
+    table.attr("width", WIDTH_ATTRIBUTE_COL + viz1.selectedCountries.length * WIDTH_PER_COUNTRY_COL);
 
     // append the header row. First column = "attribute", then one column per country
     const headerRow = table.append("thead").append("tr");
@@ -931,7 +805,7 @@ function redrawViz2() {
              .text("Attribute")
              .attr("width", WIDTH_ATTRIBUTE_COL);
 
-    viz2.selectedCountries.forEach(function(country) {
+    viz1.selectedCountries.forEach(function(country) {
         headerRow.append("th")
                  .text(country)
                  .attr("width", WIDTH_PER_COUNTRY_COL);
@@ -940,36 +814,33 @@ function redrawViz2() {
     // add the data rows. First cell in each row is the attribute, the remaining cells are the countries' values
     const tbody = table.append("tbody");
 
-    categoryAttributes.forEach(function(attribute) {
-        const tr = tbody.append("tr");
+    dataDict.filter(d => d.category == viz2.selectedCategory)
+            .forEach(function(attribute) {
+                const tr = tbody.append("tr");
 
-        if(attribute.variable_name == viz2.selectedAttribute) {
-            tr.classed("selected-row", true);
-        }
+                tr.classed("selected-row", attribute.variable_name == viz1.selectedAttribute)
+                  .append("td").text(attribute.display_name);
+                
+                // make a hashmap/dictionary from country --> attribute value
+                const attributeMap = viz2Data.reduce(
+                    function(map, obj) {
+                        map[obj.countryname] = obj[attribute.variable_name]; 
+                        return map;
+                }, {});
 
-        tr.append("td")
-            .text(attribute.display_name);
-        
-        // make a map from country --> attribute value
-        const attributeMap = viz2TableData.reduce(
-            function(map, obj) {
-                map[obj.countryname] = obj[attribute.variable_name]; 
-                return map;
-        }, {});
+                // add each country's value, in order of appearance
+                // round numeric values to 3 decimal places, and replace "NAN" or "NA" with "No data"
+                viz1.selectedCountries.forEach(function(country) {
+                    let valText = attributeMap[country];
+                    if(typeof valText == "number") {
+                        valText = (isNaN(valText) ? "No data" : (Math.round(1000 * valText) / 1000).toLocaleString()); // round to nearest 3 decimal places
+                    } else {
+                        valText = (((valText === "NA") || (valText === "")) ? "No data" : valText);
+                    }
 
-        // add each country's value, in order of appearance
-        // round numeric values to 3 decimal places, and replace "NAN" or "NA" with "No data"
-        viz2.selectedCountries.forEach(function(country) {
-            let valText = attributeMap[country];
-            if(typeof valText == "number") {
-                valText = (isNaN(valText) ? "No data" : (Math.round(1000 * valText) / 1000).toLocaleString()); // round to nearest 3 decimal places
-            } else {
-                valText = (((valText === "NA") || (valText === "")) ? "No data" : valText);
-            }
-
-            tr.append("td").text(valText);
-        });
-    });
+                    tr.append("td").text(valText);
+                });
+            });
 }
 
 function redrawViz3() {
@@ -1213,6 +1084,7 @@ function makeViz1a() {
                 // selection changed: re-draw!
                 redrawViz1b();
                 redrawViz1c();
+                redrawViz2();
             }
         }).lower();
 }
@@ -1312,9 +1184,6 @@ function makeViz1c() {
     /***************
     * make x-axis (date)
     ***************/
-    let minDate = d3.min(covidData, d => d.date);
-    let maxDate = d3.max(covidData, d => d.date);
-
     viz1c.xScale = d3.scaleTime()
                      .domain([minDate, maxDate])
                      .rangeRound([0, viz1c.dims.innerWidth]);
@@ -1562,131 +1431,8 @@ function makeViz1ContinentLegend() {
 }
 
 function makeViz2() {
-    viz2.margin = {top: 40, right: 150, bottom: 60, left: 70};
-
-    viz2.dims = {height: 400, width: 700};
-
-    viz2.dims.innerHeight = viz2.dims.height - viz2.margin.top - viz2.margin.bottom;
-    viz2.dims.innerWidth = viz2.dims.width - viz2.margin.left - viz2.margin.right;
-
-    /***************
-     *  Create svg
-    ***************/
-    viz2.svg = d3.select("div.viz2 svg")
-                     .attr("width", viz2.dims.width)
-                     .attr("height", viz2.dims.height)
-                     .attr("viewBox", `0 0 ${viz2.dims.width} ${viz2.dims.height}`)
-                     .attr("preserveAspectRatio", "xMinYMin")
-                     .classed("viz2", true)
-                 .append("g")
-                     .attr("transform", "translate(" + viz2.margin.left + "," + viz2.margin.top + ")");
-
-    /***************
-     * Scales
-    ***************/
-    viz2.yScale = d3.scaleLinear()
-                    // rangeRound ensures all pixel values are non-fractional
-                    .rangeRound([viz2.dims.innerHeight - 10, 0]); // [high, low] so it plots correctly
-
-    let minDate = d3.min(covidData, d => d.date);
-    let maxDate = d3.max(covidData, d => d.date);
-
-    viz2.xScale = d3.scaleTime()
-                    .domain([minDate, maxDate])
-                    .rangeRound([0, viz2.dims.innerWidth]);
-
-    /***************
-     * make y-axis (attribute)
-    ***************/
-    viz2.svg.append("g")
-        .classed("viz2 y axis", true);
-
-    viz2.yAxis = d3.axisLeft(viz2.yScale);
-
-    /***************
-    * make x-axis (date)
-    ***************/
-    viz2.xAxis = d3.axisBottom(viz2.xScale);
-
-    viz2.svg.append("g")
-        .classed("viz2 x axis", true)
-        .attr("transform", "translate(0," + viz2.dims.innerHeight + ")")
-        .call(viz2.xAxis);
-
-    /***************
-    * x-axis gridlines
-    * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-    ***************/
-    viz2.xAxisTicks = d3.axisBottom(viz2.xScale)
-                        .tickSize(-viz2.dims.innerHeight)
-                        .tickFormat("");
-
-    viz2.svg.append("g")
-        .classed("viz2 x grid", true)
-        .attr("transform", "translate(0," + viz2.dims.innerHeight + ")")
-        .call(viz2.xAxisTicks);  // X-axis gridlines shouldn't change
-
-    //rotate x-axis ticks
-    d3.selectAll('.viz2.x.axis .tick text')
-        .attr("transform","rotate(-45)")
-        .attr("text-anchor","end");
-
-    /***************
-     * y-axis gridlines
-     * see: https://bl.ocks.org/d3noob/c506ac45617cf9ed39337f99f8511218
-    ***************/
-    viz2.yAxisTicks = d3.axisLeft(viz2.yScale)
-                        .tickSize(-viz2.dims.innerWidth)
-                        .tickFormat("");
-
-    viz2.svg.append("g")
-        .classed("viz2 y grid", true);
-        // note: can't call yAxisTicks yet because it depends on data
-
-
-    /***************
-     * chart title
-    ***************/
-    viz2.title = viz2.svg.append("text")
-                     .classed("viz2 title", true)
-                     .attr("x", 0)
-                     .attr("y", 0)
-                     .attr("text-anchor", "start")
-                     .attr("transform", "translate(0, -10)")
-                     .style("font-size", FONT_SIZES.title + "px");
-    
-    /***************
-     * Table title
-    ***************/
-   viz2.tableTitle = d3.select("div.viz2 p")
-                        .style("font-size", FONT_SIZES.title + "px");
-}
-
-function makeViz2ContinentLegend() {
-    let margin = { top: 30, right: 0, bottom: 0, left: 0 };
-    let dims = {height: 300, width: 100};
-    dims.innerHeight = dims.height - margin.top - margin.bottom;
-    dims.innerWidth = dims.width - margin.left - margin.right;
-
-    let svg = d3.select("div.viz2-continents")
-                .append("svg")
-                    .attr("width", dims.width)
-                    .attr("height", dims.height)
-                    .attr("viewBox", `0 0 ${dims.width} ${dims.height}`)
-                    .attr("preserveAspectRatio", "xMinYMin")
-                    .classed("viz2", true)
-                .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    svg.append(() => legend({
-                color: continentColors,
-                title: "Continents",
-                width: 25,
-                height: (25 * continentColors.domain().length),
-                ticks: 4,
-                tickFormat: ".0f",
-                reverseOrdinal: true
-            }));
+   d3.select("div.viz2 p").style("font-size", FONT_SIZES.title + "px");
+   d3.select("#table-date").text(formatDateLong(maxDate));
 }
 
 function makeViz3() {
@@ -1800,15 +1546,22 @@ function makeViz3() {
 }
 
 Promise.all([
-    d3.csv("https://d3-covid.s3.amazonaws.com/data_dictionary.csv", dictRowParser),
-    d3.csv("https://d3-covid.s3.amazonaws.com/covid_data.csv", dataRowParser),
-    d3.json("https://d3-covid.s3.amazonaws.com/country_polygons.json")
+    //d3.csv("./data/data_dictionary.csv", dictRowParser),
+    //d3.csv("./data/covid_data.csv", dataRowParser),
+    //d3.json("./data/country_polygons.json")
+    d3.csv("./data/data_dictionary.csv", dictRowParser),
+    d3.csv("./data/covid_data.csv", dataRowParser),
+    d3.json("./data/country_polygons.json")
 ]).then(function (files) {
     dataDict = files[0];
     covidData = files[1];
     geomData = files[2];
 
     console.log("Imported all data!");
+
+    // these are used in multiple places
+    minDate = d3.min(covidData, d => d.date);
+    maxDate = d3.max(covidData, d => d.date);
 
     /***************************
     * Viz 1: Attributes dropdown. Add attributes with <optgroup> for each category, <option> for each attribute
@@ -1849,6 +1602,18 @@ Promise.all([
                 .attr("value");  // want value (variable_name), not the text (display_name)
            
             redrawViz1All();
+
+            let selectedName = d3.select(this)
+                                 .select("option:checked")
+                                 .text();
+
+            // also update the highlighted row in the viz2 table
+            d3.selectAll(".viz2-table table tr td:first-of-type")
+                .each(function() {
+                    td = d3.select(this);
+                    //console.log([td.text(), selectedName, td.text() == selectedName, d3.select(this.parentNode).node()]);
+                    d3.select(this.parentNode).classed("selected-row", td.text() == selectedName);
+                });
         });
 
 
@@ -1890,50 +1655,9 @@ Promise.all([
     });
 
     /***************************
-    * Viz 2: Countries select list. Add countries to select list and set up "change" listener to redraw
+    * Viz 2 Category dropdown
     **************************/
-    let selectCountry = d3.select("select#viz2-countries");
-
-    // get unique countries, then append <option> to <select>
-    Array.from(new Set(covidData.map(d => d.countryname)))
-        .sort()  // put country names in order in dropdown menu
-        .forEach(function(country) {
-            selectCountry.append('option')
-                .attr("value", country)
-                .text(country);
-        });
-    
-    // initialize with these countries selected
-    const initialCountries = ["Russia", "New Zealand", "Ethiopia"];
-
-    d3.selectAll("select#viz2-countries option")
-        .filter(function() {return initialCountries.includes(d3.select(this).text());})
-        .attr("selected", "selected");
-
-    viz2.selectedCountries = initialCountries;
-
-    // create listener
-    selectCountry.on("change", function() {
-        let countries = [];
-
-        d3.select(this)
-          .selectAll("option:checked")
-          .each(function() { countries.push(this.value); }); // for each select country, get its value (name)
-
-        // want to maintain ordering of original selection
-        viz2.selectedCountries = viz2.selectedCountries.filter(d => countries.includes(d));
-        let added = countries.filter(d => !viz2.selectedCountries.includes(d));
-        viz2.selectedCountries = viz2.selectedCountries.concat(added);
-
-        redrawViz2();
-    });
-
-    /***************************
-    * Viz 2: 1st dropdown: Category
-    **************************/
-    // add attributes to the attribute dropdown menu;
     let selectCat = d3.select("select#viz2-categories");
-    selectAttr = d3.select("select#viz2-attributes");
 
     // get unique categories, then append <option> to <select>
     Array.from(new Set(dataDict.filter(d => d.sort_order != 0)
@@ -1947,45 +1671,14 @@ Promise.all([
 
     viz2.selectedCategory = selectCat.select("option:checked").attr("value");
 
-    const populateAttributeSelector = function (category) {
-        selectAttr.selectAll("option").remove();
-
-        dataDict.filter(d => d.category == category)
-                .forEach(function(attribute, i) {
-                    selectAttr.append('option')
-                        .attr("value", attribute.variable_name)
-                        .text(attribute.display_name)
-                        .property("checked", i == 0);
-                });
-    };
-
     // create listener
     selectCat.on("change", function() {
         viz2.selectedCategory = d3.select(this)
                                   .select("option:checked")
                                   .attr("value");
 
-        // use the new category's category to populate the attribute select list
-        populateAttributeSelector(viz2.selectedCategory);
-        viz2.selectedAttribute = selectAttr.select("option:checked").attr("value");
-
         redrawViz2();
     });
-
-    /***************************
-    * Viz 2: 2nd dropdown: Attributes
-    **************************/
-    populateAttributeSelector(viz2.selectedCategory);
-    viz2.selectedAttribute = selectAttr.select("option:checked").attr("value");
-
-    // create listener
-    selectAttr
-        .on("change", function() {
-            viz2.selectedAttribute = d3.select(this)
-                                       .select("option:checked")
-                                       .attr("value");  // want value (variable_name), not the text (display_name)
-            redrawViz2();
-        });
 
     /***************************
     * Viz 3: Countries select list. Add countries to select list and set up "change" listener to redraw
@@ -2085,7 +1778,7 @@ Promise.all([
     /***************************
     * Create the viz!
     **************************/
-    viz1.selectedDate = viz3.selectedDate = d3.max(covidData, d => d.date);
+    viz1.selectedDate = viz3.selectedDate = maxDate;
     makeDateSlider(viz1, "#viz1-date-slider-wrap");
     makeDateSlider(viz3, "#viz3-date-slider-wrap");
     
@@ -2099,7 +1792,6 @@ Promise.all([
     d3.select('path.shape-USA').dispatch('click');  // initialize with USA
 
     makeViz2();
-    makeViz2ContinentLegend();
     redrawViz2();  // since we don't have a dateUpdate step for this viz, we have to manually kick this off for viz 2
 
     makeViz3();

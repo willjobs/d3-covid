@@ -7,9 +7,9 @@
     <title>Covid-19 Visualizations</title>
     <link rel="stylesheet" href="covid.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script type="text/javascript" src="https://d3js.org/d3.v6.min.js"></script>
-    <script type="text/javascript" src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script type="text/javascript" src="legend.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="legend.js"></script>
 </head>
 <body>
     <div id="introduction">
@@ -59,23 +59,11 @@
     </div>
 
     <div id="viz2-container" class="container" style="margin-left:-9999px">
-        <div style="float:left; margin-bottom: 20px;">
-            <select name="viz2-countries" id="viz2-countries" multiple size="10"></select>
-        </div>
-
-        <div style="float:left; margin-left:20px">
-            <label for="viz2-categories">Category: </label><select name="viz2-categories" id="viz2-categories"></select>
-            <br><br>
-            <label for="viz2-attributes">Attribute: &nbsp;</label><select name="viz2-attributes" id="viz2-attributes"></select>
-        </div>
-
         <div class="viz2">
+            <p>Latest data on <select name="viz2-categories" id="viz2-categories"></select>
+                for selected countries (<span id="table-date"></span>):</p>
             <p class="table-title"></p>
-            <div class="viz2-table">
-                <table></table>
-            </div>
-            <svg></svg>
-            <div class="viz2-continents" style="display:inline-block;"></div>
+            <div class="viz2-table"></div>
         </div>
     </div>
 
@@ -84,9 +72,9 @@
             <select name="viz3-countries" id="viz3-countries" multiple size="10"></select>
         </div>
         <div style="float:left; margin-left:20px">
-            <label for="viz3-xattributes">X-Value: </label><select name="viz3-xattributes" id="viz3-xattributes"></select>
+            <label for="viz3-xattributes">X-Axis: </label><select name="viz3-xattributes" id="viz3-xattributes"></select>
             <br><br>
-            <label for="viz3-yattributes">Y-Value: </label><select name="viz3-yattributes" id="viz3-yattributes"></select>
+            <label for="viz3-yattributes">Y-Axis: </label><select name="viz3-yattributes" id="viz3-yattributes"></select>
         </div>
 
         <div id="viz3-date-slider-wrap" style="width:600px; clear:left;">
@@ -297,8 +285,8 @@
         </ul>
     </div>
 
-    <script type="text/javascript" src="viz_all.js"></script>
-    <script type="text/javascript">
+    <script src="viz_all.js"></script>
+    <script>
         // this makes it so chrome doesn't reload halfway down the page
         // https://stackoverflow.com/a/48406913/1102199
         history.scrollRestoration = "manual";
