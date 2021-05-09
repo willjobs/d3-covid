@@ -1540,9 +1540,6 @@ function makeViz3() {
 }
 
 Promise.all([
-    //d3.csv("./data/data_dictionary.csv", dictRowParser),
-    //d3.csv("./data/covid_data.csv", dataRowParser),
-    //d3.json("./data/country_polygons.json")
     d3.csv("./data/data_dictionary.csv", dictRowParser),
     d3.csv("./data/covid_data.csv", dataRowParser),
     d3.json("./data/country_polygons.json")
