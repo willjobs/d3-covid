@@ -1695,13 +1695,13 @@ Promise.all([
                         .property("checked", i==0);
                 });
         
-        // initialize with x dropdown = "New cases" and y dropdown = "School closing"
+        // initialize with x dropdown = "Facial coverings" and y dropdown = "New cases"
         d3.selectAll("select#viz3-xattributes option")
-            .filter(function() {return (d3.select(this).text() == "New cases");})
+            .filter(function() {return (d3.select(this).text() == "Facial coverings");})
             .attr("selected", "selected");
 
         d3.selectAll("select#viz3-yattributes option")
-            .filter(function() {return (d3.select(this).text() == "School closing");})
+            .filter(function() {return (d3.select(this).text() == "New cases");})
             .attr("selected", "selected");
         
         // create listener
