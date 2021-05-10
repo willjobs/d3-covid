@@ -50,6 +50,7 @@ body {
     display: none;
     min-width: 80px;
     height: auto;
+    z-index: 99920;
     background: none repeat scroll 0 0 #ffffff;
     border: 1px solid #6F257F;
     padding: 14px;
@@ -176,6 +177,12 @@ body {
     0%    { opacity:0.8; stroke-width: 1; stroke-dasharray: 2,2;}
     50%   { opacity:1.0; stroke-width: 2; stroke-dasharray: 3,3}
     100%  { opacity:0.8; stroke-width: 1; stroke-dasharray: 2,2}
+}
+
+.viz1a.legend {
+    position: relative;
+    z-index: 99910;  /* on top of map, but underneath bar chart's tooltip */
+    pointer-events: none;
 }
 
 div.viz2 {

@@ -326,10 +326,7 @@ function redrawViz1a() {
     d3.selectAll(".viz1a.legend").remove();  // if it already exists, remove it and replace it
     const mapDiv = d3.select("#map")
                      .append("div")  // this ensures it doesn't move with the map when we drag it
-                         .classed("viz1a legend", true)
-                         .style("position", "relative")
-                         .style("z-index", 99999)  // this plus the position:relative makes it appear on top
-                         .style("pointer-events", "none");  // this ensures we don't block the mouseovers, clicks, etc
+                     .classed("viz1a legend", true);
 
     if(colorScale.domain().length > 0) {
         mapDiv.append(() => legend({
@@ -991,8 +988,7 @@ function redrawViz3() {
 function makeViz1a() {
     viz1a.tooltip = d3.select("body")
                       .append("div")
-                      .classed("viz1a tooltip", true)
-                      .style("z-index", 999);  // use z-index to make sure the tooltip shows up above the map
+                      .classed("viz1a tooltip", true);
 
     viz1a.title = d3.select(".viz1a.title span")
                     .style("font-size", FONT_SIZES.title + "px")
