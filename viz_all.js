@@ -980,7 +980,7 @@ function redrawViz3() {
                     viz3.tooltip.style("display", "none");
                 })
                 .transition()
-                .duration(500)
+                .duration(viz3.shortenTransitions > 0 ? viz3.shortenTransitions : 300)
                 .attr("cy", d => viz3.yScale(isNaN(d[attributeNames.y.data]) ? 0 : d[attributeNames.y.data]))
                 .attr("cx", d => viz3.xScale(isNaN(d[attributeNames.x.data]) ? 0 : d[attributeNames.x.data]));
 }
