@@ -265,8 +265,8 @@ def recode_oxford_vars(df):
     df[cols] = df[cols].applymap(add_g)
 
     #### now update e1_combined and h7_combined, which have special values
-    # update h7_combined to set "1I" = "1G"; we will recode in a bit
-    df.loc[df["h7_combined"]=="1I", "h7_combined"] = "1G"
+    # update h7_combined to set "I" = "G"; we will recode in a bit
+    df["h7_combined"] = df["h7_combined"].str.replace("I", "G")
 
     # update e1_combined to set "1A" = "1G", "2A" = "2G", "1F" = "1T", "2F" = "2T"; we will recode in a bit
     df.loc[df["e1_combined"].str.slice(1)=="F", "e1_combined"] = \
@@ -295,10 +295,11 @@ def recode_GT(df):
             elif x[-1:] == "T":
                 return x[:-1] + "-Local"
             else:
-                print(x)
+                print([type(x), str(x)])
                 raise RuntimeError("Issue with recoding variable")
         except:
             print(x)
+            df.to_csv("failed_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv", index=False)
             raise
 
     cols = [x for x in df.columns if x[-9:]=="_combined"]
