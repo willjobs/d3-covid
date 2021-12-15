@@ -246,6 +246,10 @@ def recode_oxford_vars(df):
     print("Recoding Oxford variables...", end="", flush=True)
     ## re-code 4 oxford variables without flags, and 2 that have special variables
     
+    df.drop(columns=["v1_combined", "v1_combined_numeric",
+                     "v2_combined", "v2_combined_numeric",
+                     "v3_combined", "v3_combined_numeric",], inplace=True)
+
     #### these variables don't have a flag, so are applied to the whole country. Let's apply a "G" 
     # to the end of the values to match the formatting of the other "combined" variables.
     cols = ['e2_combined', 'h2_combined', 'h3_combined', 'c8_combined',]
